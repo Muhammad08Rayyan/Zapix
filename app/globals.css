@@ -170,6 +170,16 @@ body {
   }
 }
 
+/* Global text selection color for copy/paste */
+*::selection {
+  background: var(--color-primary);
+  color: #000;
+}
+*::-moz-selection {
+  background: var(--color-primary);
+  color: #000;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -179,4 +189,38 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Subtle up-down float motion for decorative elements */
+@keyframes floatY {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Global custom scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) transparent;
+  scrollbar-gutter: stable both-edges;
+}
+
+/* Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary);
+  border-radius: 9999px;
+  border: 2px solid var(--color-background);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-chart-1);
 }

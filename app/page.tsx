@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Calendar, Users, MessageSquare, FileText, Shield, Zap, Mail, Send, Sun, Moon, Info } from "lucide-react";
+import { CheckCircle, Calendar, Users, MessageSquare, FileText, Shield, Zap, Mail, Send, Sun, Moon, Info, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
@@ -197,33 +197,96 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4 opacity-0 animate-[fadeIn_0.6s_ease-out_forwards]">
-        <div className="container mx-auto text-center">
-          <Badge variant="secondary" className="mb-4 opacity-0 animate-[fadeIn_0.6s_ease-out_0.1s_forwards]">
-            Revolutionizing Healthcare Communication
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 opacity-0 animate-[fadeIn_0.6s_ease-out_0.2s_forwards]">
-            Smart WhatsApp-Based
-            <br />
-            <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">Doctor Appointment System</span>
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto opacity-0 animate-[fadeIn_0.6s_ease-out_0.3s_forwards]">
-            Streamline your medical practice with our intelligent WhatsApp bot that handles patient bookings, 
-            payments, and communication automatically. Built for modern healthcare providers.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center opacity-0 animate-[fadeIn_0.6s_ease-out_0.4s_forwards]">
-            <Button size="lg" asChild className="transition-all duration-300 hover:scale-105 hover:shadow-xl group">
-              <button onClick={() => scrollToSection('features')}>
-                Explore Features
-                <span className="ml-2 transition-transform group-hover:translate-x-1">→</span>
-              </button>
-            </Button>
-            <Button size="lg" variant="outline" asChild className="transition-all duration-300 hover:scale-105 hover:shadow-xl group">
-              <Link href="/login">
-                Get Started
-                <span className="ml-2 transition-transform group-hover:translate-x-1">→</span>
-              </Link>
-            </Button>
+      <section className="relative overflow-hidden">
+        {/* background */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent" />
+          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[120vw] h-[120vw] rounded-full bg-primary/10 blur-3xl" />
+        </div>
+
+        <div className="container mx-auto px-4 py-24 md:py-28">
+          <div className="grid items-center gap-10 md:grid-cols-2">
+            {/* copy */}
+            <div>
+              <Badge variant="secondary" className="mb-4 inline-flex items-center gap-1">
+                <Sparkles className="h-4 w-4 text-primary" /> New in 2025
+              </Badge>
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
+                WhatsApp-native
+                <br />
+                <span className="bg-gradient-to-r from-primary via-emerald-400 to-primary/80 bg-clip-text text-transparent">Doctor Appointments</span>
+              </h1>
+              <p className="text-lg md:text-xl text-muted-foreground max-w-xl">
+                Automate bookings, reminders, and payments with a bot your patients already use. Less admin. More care.
+              </p>
+
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Button size="lg" asChild className="transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                  <button onClick={() => scrollToSection('features')}>
+                    See Features
+                  </button>
+                </Button>
+                <Button size="lg" variant="outline" asChild className="transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                  <Link href="/login">Launch Dashboard</Link>
+                </Button>
+              </div>
+
+              {/* trust bar */}
+              <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Secure by design
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-primary" /> Payment-ready
+                </div>
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-primary" /> Built on WhatsApp
+                </div>
+              </div>
+            </div>
+
+            {/* visual (hidden on mobile) */}
+            <div className="relative hidden md:block">
+              {/* floating glow */}
+              <div className="absolute -inset-6 rounded-3xl bg-gradient-to-tr from-primary/20 via-transparent to-primary/10 blur-2xl" />
+              {/* phone mockup */}
+              <div className="relative mx-auto w-full max-w-sm rounded-[2rem] border bg-background shadow-xl">
+                <div className="h-6 flex items-center justify-center text-xs text-muted-foreground">WhatsApp Chat</div>
+                <div className="border-t">
+                  <div className="p-4 space-y-3 max-h-[22rem] overflow-hidden">
+                    <div className="w-9/12 rounded-2xl bg-muted p-3 animate-[fadeIn_0.6s_ease-out_forwards]">
+                      Hi! I’d like to book an appointment.
+                    </div>
+                    <div className="w-10/12 rounded-2xl bg-primary text-primary-foreground ml-auto p-3 animate-[fadeIn_0.6s_ease-out_0.1s_forwards]">
+                      Sure! What specialty and preferred date?
+                    </div>
+                    <div className="w-7/12 rounded-2xl bg-muted p-3 animate-[fadeIn_0.6s_ease-out_0.2s_forwards]">
+                      Dermatology, this Friday.
+                    </div>
+                    <div className="w-11/12 rounded-2xl bg-primary text-primary-foreground ml-auto p-3 animate-[fadeIn_0.6s_ease-out_0.3s_forwards]">
+                      Available at 11:30 AM. Confirm and pay now?
+                    </div>
+                    <div className="w-8/12 rounded-2xl bg-muted p-3 animate-[fadeIn_0.6s_ease-out_0.4s_forwards]">
+                      Yes, confirm.
+                    </div>
+                    <div className="w-11/12 rounded-2xl bg-primary text-primary-foreground ml-auto p-3 animate-[fadeIn_0.6s_ease-out_0.5s_forwards]">
+                      Done! You’ll get reminders and the receipt here. ✅
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* floating badges */}
+              {/* position safely within container on small screens, allow wider on large */}
+              <div className="absolute right-2 top-2 lg:-right-6 lg:-top-6 flex flex-col gap-3">
+                <div className="rounded-full bg-background border shadow-md px-3 py-1 text-xs flex items-center gap-2 animate-[floatY_4s_ease-in-out_infinite]">
+                  <Calendar className="h-3.5 w-3.5 text-primary" /> Auto-scheduling
+                </div>
+                <div className="rounded-full bg-background border shadow-md px-3 py-1 text-xs flex items-center gap-2 animate-[floatY_5s_ease-in-out_infinite]">
+                  <Users className="h-3.5 w-3.5 text-primary" /> EMR-ready
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
