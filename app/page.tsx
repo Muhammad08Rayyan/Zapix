@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CheckCircle, Calendar, Users, MessageSquare, FileText, Shield, Zap, Mail, Send, Sun, Moon, Info } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
 export default function HomePage() {
@@ -73,6 +73,51 @@ export default function HomePage() {
   const conversationTooltipText =
     "A 'conversation' follows WhatsApp Business's 24-hour session window: once a patient or your bot sends the first message, a 24-hour window opens and all messages in that window count as a single conversation. When the window expires and messaging resumes, it counts as a new conversation.";
 
+  function ConversationFeature({ featureText }: { featureText: string }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLSpanElement | null>(null);
+
+    useEffect(() => {
+      const handlePointerDown = (e: MouseEvent | TouchEvent | PointerEvent) => {
+        const target = e.target as Node;
+        if (containerRef.current && !containerRef.current.contains(target)) {
+          setIsOpen(false);
+        }
+      };
+      document.addEventListener("pointerdown", handlePointerDown);
+      return () => document.removeEventListener("pointerdown", handlePointerDown);
+    }, []);
+
+    const toggleOpen = () => setIsOpen((prev) => !prev);
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleOpen();
+      } else if (e.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
+    return (
+      <span
+        ref={containerRef}
+        className="relative group inline-flex items-center"
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        onClick={toggleOpen}
+        onKeyDown={handleKeyDown}
+      >
+        <span className="underline decoration-dotted underline-offset-2 cursor-pointer">{featureText}</span>
+        <Info className={`ml-1 h-3.5 w-3.5 transition-colors ${isOpen ? "text-primary" : "text-muted-foreground/80"} group-hover:text-primary`} />
+        <span className={`pointer-events-none absolute left-0 top-full mt-2 max-w-xs rounded-md border bg-background p-3 text-xs shadow-lg transition-all duration-200 z-20 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 ${isOpen ? "opacity-100 translate-y-0" : ""}`}>
+          {conversationTooltipText}
+        </span>
+      </span>
+    );
+  }
+
   const renderFeatureItem = (feature: string, index: number) => {
     const isConversationItem = /conversation/i.test(feature);
     if (!isConversationItem) {
@@ -87,13 +132,7 @@ export default function HomePage() {
     return (
       <li key={index} className="flex items-center gap-2">
         <CheckCircle className="w-4 h-4 text-primary" />
-        <span className="relative group inline-flex items-center">
-          <span className="underline decoration-dotted underline-offset-2 cursor-help">{feature}</span>
-          <Info className="ml-1 h-3.5 w-3.5 text-muted-foreground/80 group-hover:text-primary transition-colors" />
-          <span className="pointer-events-none absolute left-0 top-full mt-2 max-w-xs rounded-md border bg-background p-3 text-xs shadow-lg opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 z-20">
-            {conversationTooltipText}
-          </span>
-        </span>
+        <ConversationFeature featureText={feature} />
       </li>
     );
   };
