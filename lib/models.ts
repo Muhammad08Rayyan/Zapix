@@ -51,7 +51,8 @@ const DoctorSchema = new Schema<Doctor>({
     currentMonth: { type: String, default: () => new Date().toISOString().slice(0, 7) }, // YYYY-MM format
     messagesUsed: { type: Number, default: 0 },
     lastResetDate: { type: Date, default: Date.now }
-  }
+  },
+  defaultPrice: { type: Number, default: 3000 }
 }, {
   timestamps: true
 });
@@ -94,10 +95,10 @@ const AppointmentSchema = new Schema<Appointment>({
   timestamps: true
 });
 
-// Slot Schema
+// Slot Schema (for recurring weekly slots)
 const SlotSchema = new Schema<Slot>({
   doctorId: { type: String, required: true },
-  date: { type: String, required: true }, // YYYY-MM-DD format
+  dayOfWeek: { type: Number, required: true, min: 0, max: 6 }, // 0 = Sunday, 1 = Monday, etc.
   startTime: { type: String, required: true }, // HH:MM format
   duration: { type: Number, required: true }, // in minutes
   type: {
@@ -107,7 +108,38 @@ const SlotSchema = new Schema<Slot>({
   },
   address: String,
   price: { type: Number, required: true },
-  isBooked: { type: Boolean, default: false }
+  isActive: { type: Boolean, default: true }
+}, {
+  timestamps: true
+});
+
+// Slot Booking Schema (for specific date bookings)
+const SlotBookingSchema = new Schema({
+  slotId: { type: String, required: true },
+  doctorId: { type: String, required: true },
+  patientId: { type: String, required: true },
+  date: { type: String, required: true }, // YYYY-MM-DD format
+  status: {
+    type: String,
+    enum: ['booked', 'cancelled', 'completed'],
+    default: 'booked'
+  },
+  paymentReceiptUrl: String,
+  symptoms: String,
+  additionalNotes: String,
+  rejectionReason: String,
+  cancellationReason: String,
+  rescheduleRequest: {
+    doctorNotes: String,
+    newSlotId: String,
+    newDate: String,
+    requestedAt: Date,
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'pending'
+    }
+  }
 }, {
   timestamps: true
 });
@@ -176,7 +208,9 @@ const MessageSchema = new Schema<Message>({
 DoctorSchema.index({ email: 1, phone: 1 });
 PatientSchema.index({ phone: 1, doctorId: 1 });
 AppointmentSchema.index({ doctorId: 1, status: 1 });
-SlotSchema.index({ doctorId: 1, date: 1, startTime: 1 });
+SlotSchema.index({ doctorId: 1, dayOfWeek: 1, startTime: 1 });
+SlotBookingSchema.index({ slotId: 1, date: 1 });
+SlotBookingSchema.index({ doctorId: 1, date: 1 });
 MessageSchema.index({ patientPhone: 1, createdAt: -1 });
 
 // Export models
@@ -184,6 +218,7 @@ export const DoctorModel: Model<Doctor> = mongoose.models.Doctor || mongoose.mod
 export const PatientModel: Model<Patient> = mongoose.models.Patient || mongoose.model<Patient>('Patient', PatientSchema);
 export const AppointmentModel: Model<Appointment> = mongoose.models.Appointment || mongoose.model<Appointment>('Appointment', AppointmentSchema);
 export const SlotModel: Model<Slot> = mongoose.models.Slot || mongoose.model<Slot>('Slot', SlotSchema);
+export const SlotBookingModel = mongoose.models.SlotBooking || mongoose.model('SlotBooking', SlotBookingSchema);
 export const AdminModel: Model<Admin> = mongoose.models.Admin || mongoose.model<Admin>('Admin', AdminSchema);
 export const AdminSettingsModel: Model<AdminSettings> = mongoose.models.AdminSettings || mongoose.model<AdminSettings>('AdminSettings', AdminSettingsSchema);
 export const MessageModel: Model<Message> = mongoose.models.Message || mongoose.model<Message>('Message', MessageSchema);

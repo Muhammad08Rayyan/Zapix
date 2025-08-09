@@ -18,7 +18,9 @@ import {
   Activity,
   FileText,
   CreditCard,
-  User
+  User,
+  DollarSign,
+  Clock
 } from "lucide-react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
@@ -38,10 +40,16 @@ const sidebarItems = [
     description: "Overview & Analytics"
   },
   {
+    title: "Bookings",
+    href: "/doctor/bookings",
+    icon: Clock,
+    description: "Booking Requests"
+  },
+  {
     title: "Appointments",
     href: "/doctor/appointments",
     icon: Calendar,
-    description: "Manage Bookings"
+    description: "Confirmed Appointments"
   },
   {
     title: "Patients",
@@ -66,6 +74,12 @@ const sidebarItems = [
     href: "/doctor/documents",
     icon: FileText,
     description: "Files & Records"
+  },
+  {
+    title: "Payment Settings",
+    href: "/doctor/payment-settings",
+    icon: DollarSign,
+    description: "Payment Methods & Pricing"
   },
   {
     title: "Billing",

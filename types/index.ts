@@ -9,6 +9,7 @@ export interface Doctor {
   paymentDetails?: PaymentDetails;
   limits: DoctorLimits;
   messageStats: MessageStats;
+  defaultPrice?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,13 +43,25 @@ export interface Appointment {
 export interface Slot {
   id: string;
   doctorId: string;
-  date: string;
+  dayOfWeek: number; // 0 = Sunday, 1 = Monday, etc.
   startTime: string;
   duration: number; // in minutes
   type: SlotType;
   address?: string;
   price: number;
-  isBooked: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// For booking specific instances of recurring slots
+export interface SlotBooking {
+  id: string;
+  slotId: string;
+  doctorId: string;
+  patientId: string;
+  date: string; // specific date for this booking
+  status: 'booked' | 'cancelled' | 'completed';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -206,7 +219,7 @@ export interface CreateDoctorForm {
 }
 
 export interface CreateSlotForm {
-  date: string;
+  dayOfWeek: number;
   startTime: string;
   duration: number;
   type: SlotType;
