@@ -47,6 +47,7 @@ import {
   Shield,
   CheckCircle,
   XCircle,
+  Clock,
   Crown,
   Settings
 } from "lucide-react";
@@ -57,7 +58,7 @@ interface Doctor {
   name: string;
   email: string;
   phone: string;
-  plan: 'basic' | 'premium' | 'custom';
+  plan: 'none' | 'essential' | 'pro' | 'custom';
   active: boolean;
   createdAt: string;
   appointmentsCount?: number;
@@ -70,7 +71,7 @@ type DoctorFormData = {
   name: string;
   email: string;
   phone: string;
-  plan: 'basic' | 'premium' | 'custom';
+  plan: 'none' | 'essential' | 'pro' | 'custom';
 };
 
 export default function AdminDoctorsPage() {
@@ -87,7 +88,7 @@ export default function AdminDoctorsPage() {
     name: "",
     email: "",
     phone: "",
-    plan: "basic"
+    plan: "none"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -141,7 +142,12 @@ export default function AdminDoctorsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone
+          // Don't send plan - doctor will be created with 'none' plan
+        }),
       });
       
       const data = await response.json();
@@ -156,7 +162,7 @@ export default function AdminDoctorsPage() {
       }
       
       setIsCreateDialogOpen(false);
-      setFormData({ name: "", email: "", phone: "", plan: "basic" });
+      setFormData({ name: "", email: "", phone: "", plan: "none" });
       
       // Refresh the doctors list
       fetchDoctors();
@@ -201,7 +207,7 @@ export default function AdminDoctorsPage() {
       
       setIsEditDialogOpen(false);
       setSelectedDoctor(null);
-      setFormData({ name: "", email: "", phone: "", plan: "basic" });
+      setFormData({ name: "", email: "", phone: "", plan: "none" });
       
       // Refresh the doctors list
       fetchDoctors();
@@ -273,7 +279,9 @@ export default function AdminDoctorsPage() {
 
   const getPlanBadgeVariant = (plan: string) => {
     switch (plan) {
-      case 'premium': return 'default';
+      case 'none': return 'destructive';
+      case 'essential': return 'outline';
+      case 'pro': return 'default';
       case 'custom': return 'secondary';
       default: return 'outline';
     }
@@ -281,19 +289,31 @@ export default function AdminDoctorsPage() {
 
   const getPlanIcon = (plan: string) => {
     switch (plan) {
-      case 'basic': return <Shield className="h-3 w-3" />;
-      case 'premium': return <Crown className="h-3 w-3" />;
+      case 'none': return <Clock className="h-3 w-3" />;
+      case 'essential': return <Shield className="h-3 w-3" />;
+      case 'pro': return <Crown className="h-3 w-3" />;
       case 'custom': return <Users className="h-3 w-3" />;
-      default: return <Shield className="h-3 w-3" />;
+      default: return <Clock className="h-3 w-3" />;
     }
   };
 
   const getMessageLimit = (plan: string) => {
     switch (plan) {
-      case 'basic': return 1000;
-      case 'premium': return 2500;
+      case 'none': return 0;
+      case 'essential': return 1000;
+      case 'pro': return 2500;
       case 'custom': return 10000;
-      default: return 1000;
+      default: return 0;
+    }
+  };
+
+  const getPlanDisplayName = (plan: string) => {
+    switch (plan) {
+      case 'none': return 'No Plan';
+      case 'essential': return 'Essential';
+      case 'pro': return 'Pro';
+      case 'custom': return 'Custom';
+      default: return 'Unknown';
     }
   };
 
@@ -316,7 +336,7 @@ export default function AdminDoctorsPage() {
             setIsCreateDialogOpen(open);
             if (!open) {
               setError(""); // Clear errors when dialog closes
-              setFormData({ name: "", email: "", phone: "", plan: "basic" });
+              setFormData({ name: "", email: "", phone: "", plan: "none" });
             }
           }}>
             <DialogTrigger asChild>
@@ -367,26 +387,35 @@ export default function AdminDoctorsPage() {
                 
                 <div className="space-y-2">
                   <Label htmlFor="create-plan">Subscription Plan</Label>
-                  <Select value={formData.plan} onValueChange={(value: 'basic' | 'premium' | 'custom') => setFormData({...formData, plan: value})}>
+                  <Select value={formData.plan} onValueChange={(value: 'none' | 'essential' | 'pro' | 'custom') => setFormData({...formData, plan: value})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a plan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="basic">
+                      <SelectItem value="none">
                         <div className="flex items-center gap-2">
-                          <Shield className="h-4 w-4" />
+                          <Clock className="h-4 w-4" />
                           <div>
-                            <div className="font-medium">Basic</div>
-                            <div className="text-xs text-muted-foreground">1,000 conversations/month • ₨10,000</div>
+                            <div className="font-medium">No Plan</div>
+                            <div className="text-xs text-muted-foreground">Account inactive - waiting for plan assignment</div>
                           </div>
                         </div>
                       </SelectItem>
-                      <SelectItem value="premium">
+                      <SelectItem value="essential">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium">Essential</div>
+                            <div className="text-xs text-muted-foreground">1,000 messages/month • ₨10,000 • Locked settings</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pro">
                         <div className="flex items-center gap-2">
                           <Crown className="h-4 w-4" />
                           <div>
-                            <div className="font-medium">Premium</div>
-                            <div className="text-xs text-muted-foreground">2,500 conversations/month • ₨15,000 • Priority support</div>
+                            <div className="font-medium">Pro</div>
+                            <div className="text-xs text-muted-foreground">2,500 messages/month • ₨15,000 • Full customization</div>
                           </div>
                         </div>
                       </SelectItem>
@@ -438,8 +467,9 @@ export default function AdminDoctorsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Plans</SelectItem>
-                  <SelectItem value="basic">Basic</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
+                  <SelectItem value="none">No Plan</SelectItem>
+                  <SelectItem value="essential">Essential</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
                   <SelectItem value="custom">Custom</SelectItem>
                 </SelectContent>
               </Select>
@@ -503,7 +533,7 @@ export default function AdminDoctorsPage() {
                     {/* Plan Badge */}
                     <Badge variant={getPlanBadgeVariant(doctor.plan)} className="shrink-0">
                       {getPlanIcon(doctor.plan)}
-                      <span className="ml-1 capitalize">{doctor.plan}</span>
+                      <span className="ml-1">{getPlanDisplayName(doctor.plan)}</span>
                     </Badge>
                   </div>
 
@@ -626,7 +656,7 @@ export default function AdminDoctorsPage() {
           if (!open) {
             setError(""); // Clear errors when dialog closes
             setSelectedDoctor(null);
-            setFormData({ name: "", email: "", phone: "", plan: "basic" });
+            setFormData({ name: "", email: "", phone: "", plan: "none" });
           }
         }}>
           <DialogContent>
@@ -668,26 +698,35 @@ export default function AdminDoctorsPage() {
               
               <div className="space-y-2">
                 <Label htmlFor="edit-plan">Subscription Plan</Label>
-                <Select value={formData.plan} onValueChange={(value: 'basic' | 'premium' | 'custom') => setFormData({...formData, plan: value})}>
+                <Select value={formData.plan} onValueChange={(value: 'none' | 'essential' | 'pro' | 'custom') => setFormData({...formData, plan: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a plan" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="basic">
+                    <SelectItem value="none">
                       <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
+                        <Clock className="h-4 w-4" />
                         <div>
-                          <div className="font-medium">Basic</div>
-                          <div className="text-xs text-muted-foreground">1,000 conversations/month • ₨10,000</div>
+                          <div className="font-medium">No Plan</div>
+                          <div className="text-xs text-muted-foreground">Account inactive</div>
                         </div>
                       </div>
                     </SelectItem>
-                    <SelectItem value="premium">
+                    <SelectItem value="essential">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        <div>
+                          <div className="font-medium">Essential</div>
+                          <div className="text-xs text-muted-foreground">1,000 messages/month • ₨10,000</div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="pro">
                       <div className="flex items-center gap-2">
                         <Crown className="h-4 w-4" />
                         <div>
-                          <div className="font-medium">Premium</div>
-                          <div className="text-xs text-muted-foreground">2,500 conversations/month • ₨15,000 • Priority support</div>
+                          <div className="font-medium">Pro</div>
+                          <div className="text-xs text-muted-foreground">2,500 messages/month • ₨15,000 • Full customization</div>
                         </div>
                       </div>
                     </SelectItem>

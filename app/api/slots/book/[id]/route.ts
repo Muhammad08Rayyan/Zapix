@@ -4,12 +4,13 @@ import { SlotBookingModel, SlotModel, PatientModel } from '@/lib/models';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
 
-    const booking = await SlotBookingModel.findById(params.id);
+    const resolvedParams = await params;
+    const booking = await SlotBookingModel.findById(resolvedParams.id);
     
     if (!booking) {
       return NextResponse.json({
@@ -51,15 +52,16 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
 
+    const resolvedParams = await params;
     const body = await request.json();
     const { status } = body;
 
-    const booking = await SlotBookingModel.findById(params.id);
+    const booking = await SlotBookingModel.findById(resolvedParams.id);
     
     if (!booking) {
       return NextResponse.json({
@@ -108,12 +110,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
 
-    const booking = await SlotBookingModel.findById(params.id);
+    const resolvedParams = await params;
+    const booking = await SlotBookingModel.findById(resolvedParams.id);
     
     if (!booking) {
       return NextResponse.json({

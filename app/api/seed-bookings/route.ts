@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { SlotModel, SlotBookingModel, PatientModel } from '@/lib/models';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     await connectToDatabase();
 

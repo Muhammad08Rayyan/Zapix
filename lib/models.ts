@@ -12,15 +12,17 @@ import {
 // Doctor Schema
 const DoctorSchema = new Schema<Doctor>({
   name: { type: String, required: true },
-  phone: { type: String, required: true, unique: true },
+  phone: { type: String, unique: true, sparse: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   plan: { 
     type: String, 
-    enum: ['basic', 'premium', 'custom'], 
-    default: 'basic' 
+    enum: ['none', 'essential', 'pro', 'custom'], 
+    default: 'none' 
   },
-  active: { type: Boolean, default: true },
+  planAssignedDate: { type: Date },
+  planExpiryDate: { type: Date },
+  active: { type: Boolean, default: false },
   paymentDetails: {
     bankAccount: {
       accountNumber: String,
@@ -52,13 +54,25 @@ const DoctorSchema = new Schema<Doctor>({
     messagesUsed: { type: Number, default: 0 },
     lastResetDate: { type: Date, default: Date.now }
   },
-  defaultPrice: { type: Number, default: 3000 }
+  personalPhone: { type: String },
+  businessPhone: { type: String },
+  notificationSettings: {
+    appointmentReminders: { type: Boolean, default: true },
+    bookingNotifications: { type: Boolean, default: true },
+    emergencyAlerts: { type: Boolean, default: true }
+  },
+  defaultPrice: { type: Number, default: 3000 },
+  setupProgress: {
+    paymentSettings: { type: Boolean, default: false },
+    businessNumber: { type: Boolean, default: false }
+  }
 }, {
   timestamps: true
 });
 
 // Patient Schema
 const PatientSchema = new Schema<Patient>({
+  patientId: { type: String, required: true, unique: true }, // e.g., PT001, PT002
   name: { type: String, required: true },
   age: { type: Number, required: true },
   gender: { 
@@ -68,7 +82,9 @@ const PatientSchema = new Schema<Patient>({
   },
   phone: { type: String, required: true },
   medicalHistory: [{ type: String }],
-  doctorId: { type: String, required: true }
+  doctorId: { type: String, required: true },
+  privateNotes: { type: String, default: '' },
+  documents: [{ type: String }]
 }, {
   timestamps: true
 });
@@ -90,7 +106,8 @@ const AppointmentSchema = new Schema<Appointment>({
   },
   documents: [{ type: String }],
   notes: { type: String, default: '' },
-  paymentReceiptUrl: String
+  paymentReceiptUrl: String,
+  rescheduleCount: { type: Number, default: 0 }
 }, {
   timestamps: true
 });
@@ -103,7 +120,7 @@ const SlotSchema = new Schema<Slot>({
   duration: { type: Number, required: true }, // in minutes
   type: {
     type: String,
-    enum: ['in_person', 'video_call', 'phone_call'],
+    enum: ['in_person', 'video_call', 'phone_call', 'both'],
     required: true
   },
   address: String,
@@ -119,27 +136,48 @@ const SlotBookingSchema = new Schema({
   doctorId: { type: String, required: true },
   patientId: { type: String, required: true },
   date: { type: String, required: true }, // YYYY-MM-DD format
+  time: String, // Booking-specific time (may differ from slot time)
   status: {
     type: String,
-    enum: ['booked', 'cancelled', 'completed'],
+    enum: ['booked', 'cancelled', 'completed', 'confirmed', 'pending'],
     default: 'booked'
+  },
+  type: { // Patient's choice for 'both' slot types
+    type: String,
+    enum: ['in_person', 'video_call', 'phone_call', 'both']
   },
   paymentReceiptUrl: String,
   symptoms: String,
-  additionalNotes: String,
+  notes: String, // Doctor notes
+  documents: [{ type: String }],
   rejectionReason: String,
   cancellationReason: String,
-  rescheduleRequest: {
-    doctorNotes: String,
-    newSlotId: String,
-    newDate: String,
-    requestedAt: Date,
-    status: {
-      type: String,
-      enum: ['pending', 'accepted', 'rejected'],
-      default: 'pending'
-    }
-  }
+  rescheduleCount: { type: Number, default: 0 }
+}, {
+  timestamps: true
+});
+
+// Reschedule Request Schema
+const RescheduleRequestSchema = new Schema({
+  appointmentId: { type: String, required: true },
+  doctorId: { type: String, required: true },
+  requestedBy: {
+    type: String,
+    enum: ['patient', 'doctor'],
+    required: true
+  },
+  originalDate: { type: String, required: true },
+  originalTime: { type: String, required: true },
+  newDate: String,
+  newTime: String,
+  newSlotId: String,
+  reason: String,
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  doctorResponse: String
 }, {
   timestamps: true
 });
@@ -207,10 +245,13 @@ const MessageSchema = new Schema<Message>({
 // Create indexes
 DoctorSchema.index({ email: 1, phone: 1 });
 PatientSchema.index({ phone: 1, doctorId: 1 });
+PatientSchema.index({ patientId: 1, doctorId: 1 });
 AppointmentSchema.index({ doctorId: 1, status: 1 });
 SlotSchema.index({ doctorId: 1, dayOfWeek: 1, startTime: 1 });
 SlotBookingSchema.index({ slotId: 1, date: 1 });
 SlotBookingSchema.index({ doctorId: 1, date: 1 });
+RescheduleRequestSchema.index({ doctorId: 1, status: 1 });
+RescheduleRequestSchema.index({ appointmentId: 1 });
 MessageSchema.index({ patientPhone: 1, createdAt: -1 });
 
 // Export models
@@ -219,6 +260,7 @@ export const PatientModel: Model<Patient> = mongoose.models.Patient || mongoose.
 export const AppointmentModel: Model<Appointment> = mongoose.models.Appointment || mongoose.model<Appointment>('Appointment', AppointmentSchema);
 export const SlotModel: Model<Slot> = mongoose.models.Slot || mongoose.model<Slot>('Slot', SlotSchema);
 export const SlotBookingModel = mongoose.models.SlotBooking || mongoose.model('SlotBooking', SlotBookingSchema);
+export const RescheduleRequestModel = mongoose.models.RescheduleRequest || mongoose.model('RescheduleRequest', RescheduleRequestSchema);
 export const AdminModel: Model<Admin> = mongoose.models.Admin || mongoose.model<Admin>('Admin', AdminSchema);
 export const AdminSettingsModel: Model<AdminSettings> = mongoose.models.AdminSettings || mongoose.model<AdminSettings>('AdminSettings', AdminSettingsSchema);
 export const MessageModel: Model<Message> = mongoose.models.Message || mongoose.model<Message>('Message', MessageSchema);

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, getDay, isSameDay, isToday } from "date-fns";
+import { getDay } from "date-fns";
 import { Calendar, Clock, MapPin, Plus, Edit, Trash2, Loader2, AlertCircle, RotateCcw } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -12,10 +12,8 @@ import { Slot, CreateSlotForm, SlotType } from "@/types";
 import SlotForm from "@/components/doctor/SlotForm";
 import { SlotsAPI } from "@/lib/api/slots";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function DoctorSlotsPage() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [slots, setSlots] = useState<Slot[]>([]);
   const [showAddSlotDialog, setShowAddSlotDialog] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
@@ -24,18 +22,16 @@ export default function DoctorSlotsPage() {
   const [error, setError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [defaultPrice, setDefaultPrice] = useState<number>(3000);
 
-  // Get current week dates
-  const weekStart = startOfWeek(selectedDate);
-  const weekEnd = endOfWeek(selectedDate);
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // Day names for display
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  // Day names for display (Monday to Sunday)
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  // Fetch slots from API (weekly recurring slots)
+  // Fetch slots and default pricing from API
   useEffect(() => {
     fetchSlots();
+    fetchDefaultPrice();
   }, []);
 
   const fetchSlots = async () => {
@@ -53,6 +49,25 @@ export default function DoctorSlotsPage() {
     }
   };
 
+  const fetchDefaultPrice = async () => {
+    try {
+      const response = await fetch('/api/doctors/payment-settings', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data?.defaultPrice) {
+          setDefaultPrice(result.data.defaultPrice);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching default price:', err);
+      // Keep default value if fetch fails
+    }
+  };
+
   const getSlotsForDay = (dayOfWeek: number) => {
     return slots.filter(slot => slot.dayOfWeek === dayOfWeek && slot.isActive);
   };
@@ -65,6 +80,8 @@ export default function DoctorSlotsPage() {
         return 'bg-green-100 text-green-800';
       case 'phone_call':
         return 'bg-purple-100 text-purple-800';
+      case 'both':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -78,6 +95,8 @@ export default function DoctorSlotsPage() {
         return <Calendar className="h-3 w-3" />;
       case 'phone_call':
         return <Clock className="h-3 w-3" />;
+      case 'both':
+        return <MapPin className="h-3 w-3" />;
       default:
         return <Clock className="h-3 w-3" />;
     }
@@ -199,6 +218,7 @@ export default function DoctorSlotsPage() {
                 onSubmit={handleCreateSlot}
                 onCancel={() => setShowAddSlotDialog(false)}
                 error={formError}
+                defaultPrice={defaultPrice}
               />
             </DialogContent>
           </Dialog>
@@ -222,8 +242,10 @@ export default function DoctorSlotsPage() {
             <div className="w-full overflow-x-auto">
               <div className="flex flex-col sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:flex xl:flex-row gap-4 min-w-full xl:min-w-max">
               {dayNames.map((dayName, dayIndex) => {
-                const daySlots = getSlotsForDay(dayIndex);
-                const isToday = dayIndex === getDay(new Date());
+                // Convert Monday-first index to standard dayOfWeek (Monday=1, Sunday=0)
+                const dayOfWeek = dayIndex === 6 ? 0 : dayIndex + 1;
+                const daySlots = getSlotsForDay(dayOfWeek);
+                const isToday = dayOfWeek === getDay(new Date());
                 
                 return (
                   <Card key={dayName} className={`flex-none xl:flex-1 xl:min-w-[180px] w-full shadow-sm hover:shadow-md transition-all duration-200 ${isToday ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
@@ -277,7 +299,7 @@ export default function DoctorSlotsPage() {
                               
                               <div className="flex items-center justify-between pt-1">
                                 <span className="text-xs text-muted-foreground truncate">
-                                  {slot.type.replace('_', ' ')}
+                                  {slot.type === 'both' ? 'Both Online & Offline' : slot.type.replace('_', ' ')}
                                 </span>
                                 <div className="flex gap-1">
                                   <Button
@@ -368,6 +390,7 @@ export default function DoctorSlotsPage() {
                 initialData={editingSlot}
                 isEditing={true}
                 error={formError}
+                defaultPrice={defaultPrice}
               />
             </DialogContent>
           </Dialog>
@@ -410,7 +433,7 @@ export default function DoctorSlotsPage() {
                   <label className="text-sm font-medium text-muted-foreground">Appointment Type</label>
                   <Badge className={`${getSlotTypeColor(selectedSlot.type)} gap-2 text-base py-2 px-4`}>
                     {getSlotTypeIcon(selectedSlot.type)}
-                    {selectedSlot.type.replace('_', ' ')}
+                    {selectedSlot.type === 'both' ? 'Both Online & Offline' : selectedSlot.type.replace('_', ' ')}
                   </Badge>
                 </div>
 

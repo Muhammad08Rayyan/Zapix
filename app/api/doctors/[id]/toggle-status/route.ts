@@ -4,13 +4,13 @@ import { DoctorModel } from "@/lib/models";
 
 export async function PATCH(
   _request: Request,
-  context: unknown
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectToDatabase();
-    const { params } = context as { params: { id: string } };
+    const resolvedParams = await params;
     
-    const doctor = await DoctorModel.findById(params.id);
+    const doctor = await DoctorModel.findById(resolvedParams.id);
     
     if (!doctor) {
       return NextResponse.json(

@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { ValidatedNumberInput } from "@/components/ui/validated-number-input";
+import { PhoneInputComponent } from "@/components/ui/phone-input";
 import { Loader2, CreditCard, Banknote, Smartphone, AlertCircle, CheckCircle2, DollarSign } from "lucide-react";
 import DoctorLayout from "@/components/doctor/DoctorLayout";
 import { PaymentDetails } from "@/types";
@@ -20,7 +19,6 @@ interface PaymentSettingsForm extends PaymentDetails {
 }
 
 export default function PaymentSettingsPage() {
-  const { data: session } = useSession();
   const [formData, setFormData] = useState<PaymentSettingsForm>({
     bankAccount: {
       accountNumber: "",
@@ -44,11 +42,7 @@ export default function PaymentSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchPaymentSettings();
-  }, []);
-
-  const fetchPaymentSettings = async () => {
+  const fetchPaymentSettings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -66,18 +60,22 @@ export default function PaymentSettingsPage() {
 
       const result = await response.json();
       if (result.success && result.data) {
-        setFormData({
-          ...formData,
+        setFormData(prevData => ({
+          ...prevData,
           ...result.data.paymentDetails,
           defaultPrice: result.data.defaultPrice || 3000
-        });
+        }));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch payment settings');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPaymentSettings();
+  }, [fetchPaymentSettings]);
 
   const handleSave = async () => {
     try {
@@ -112,7 +110,7 @@ export default function PaymentSettingsPage() {
 
   const updateField = (section: keyof PaymentSettingsForm, field: string, value: string | number) => {
     if (section === 'defaultPrice') {
-      setFormData(prev => ({ ...prev, defaultPrice: Number(value) }));
+      setFormData(prev => ({ ...prev, defaultPrice: Number(value) || 0 }));
       return;
     }
 
@@ -124,7 +122,7 @@ export default function PaymentSettingsPage() {
     setFormData(prev => ({
       ...prev,
       [section]: {
-        ...(prev[section] as any),
+        ...(prev[section] as Record<string, string | number>),
         [field]: value
       }
     }));
@@ -226,14 +224,12 @@ export default function PaymentSettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="defaultPrice">Default Consultation Fee (PKR)</Label>
-                <Input
+                <ValidatedNumberInput
                   id="defaultPrice"
-                  type="number"
-                  min="0"
-                  step="100"
-                  placeholder="3000"
                   value={formData.defaultPrice}
-                  onChange={(e) => updateField('defaultPrice', '', e.target.value)}
+                  onChange={(value) => updateField('defaultPrice', '', value)}
+                  min={0}
+                  placeholder="3000"
                   className="text-lg font-mono"
                 />
                 <p className="text-sm text-muted-foreground">
@@ -351,6 +347,7 @@ export default function PaymentSettingsPage() {
                   <Label htmlFor="accountNumber">Account Number</Label>
                   <Input
                     id="accountNumber"
+                    type="text"
                     placeholder="1234567890123456"
                     value={formData.bankAccount?.accountNumber || ''}
                     onChange={(e) => updateField('bankAccount', 'accountNumber', e.target.value)}
@@ -380,11 +377,11 @@ export default function PaymentSettingsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="jazzCashPhone">Phone Number</Label>
-                  <Input
+                  <PhoneInputComponent
                     id="jazzCashPhone"
-                    placeholder="+92 300 1234567"
                     value={formData.jazzCash?.phoneNumber || ''}
-                    onChange={(e) => updateField('jazzCash', 'phoneNumber', e.target.value)}
+                    onChange={(value) => updateField('jazzCash', 'phoneNumber', value || '')}
+                    placeholder="Enter JazzCash phone number"
                   />
                 </div>
 
@@ -417,11 +414,11 @@ export default function PaymentSettingsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="easyPaisaPhone">Phone Number</Label>
-                  <Input
+                  <PhoneInputComponent
                     id="easyPaisaPhone"
-                    placeholder="+92 300 1234567"
                     value={formData.easyPaisa?.phoneNumber || ''}
-                    onChange={(e) => updateField('easyPaisa', 'phoneNumber', e.target.value)}
+                    onChange={(value) => updateField('easyPaisa', 'phoneNumber', value || '')}
+                    placeholder="Enter EasyPaisa phone number"
                   />
                 </div>
 

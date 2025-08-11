@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,40 @@ import {
   DollarSign
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
+import SetupProgress from "@/components/admin/SetupProgress";
 import Link from "next/link";
+import { Doctor } from "@/types";
 
 export default function AdminDashboard() {
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await fetch('/api/doctors');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            setDoctors(result.data || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch doctors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDoctors();
+  }, []);
+
+  // Find doctors with incomplete setup
+  const doctorsWithIncompleteSetup = doctors.filter(doctor => {
+    const setupProgress = doctor.setupProgress || { paymentSettings: false, businessNumber: false };
+    return !setupProgress.paymentSettings || !setupProgress.businessNumber;
+  });
+
   return (
     <AdminLayout>
       <div className="space-y-8">
@@ -75,6 +107,33 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Setup Progress for doctors with incomplete setup */}
+        {!loading && doctorsWithIncompleteSetup.length > 0 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold mb-2">Setup Progress</h2>
+              <p className="text-muted-foreground">
+                Doctors who haven&apos;t completed their setup yet
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {doctorsWithIncompleteSetup.map((doctor) => (
+                <Card key={doctor.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{doctor.name}</CardTitle>
+                    <CardDescription>{doctor.email}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <SetupProgress 
+                      setupProgress={doctor.setupProgress || { paymentSettings: false, businessNumber: false }} 
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react";
+import { RescheduleRequest } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { 
   Calendar, 
@@ -39,7 +37,7 @@ interface BookingRequest {
   patientPhone: string;
   appointmentDate: string;
   appointmentTime: string;
-  appointmentType: 'in_person' | 'video_call' | 'phone_call';
+  appointmentType: 'in_person' | 'video_call' | 'phone_call' | 'both';
   duration: number;
   price: number;
   address?: string;
@@ -49,12 +47,13 @@ interface BookingRequest {
   symptoms: string;
   medicalHistory: string[];
   status: 'pending' | 'confirmed' | 'rejected' | 'cancelled';
+  rescheduleCount?: number;
+  rescheduleRequests?: RescheduleRequest[];
   createdAt: string;
   slotId: string;
 }
 
 export default function BookingManagementPage() {
-  const { data: session } = useSession();
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,12 +62,10 @@ export default function BookingManagementPage() {
   const [rescheduleDialog, setRescheduleDialog] = useState(false);
   const [rescheduleNotes, setRescheduleNotes] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("pending");
+  const [rescheduleRequests, setRescheduleRequests] = useState<RescheduleRequest[]>([]);
+  const [showRescheduleRequests, setShowRescheduleRequests] = useState(false);
 
-  useEffect(() => {
-    fetchBookings();
-  }, [filterStatus]);
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -101,7 +98,32 @@ export default function BookingManagementPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus]);
+
+  const fetchRescheduleRequests = useCallback(async () => {
+    try {
+      const response = await fetch('/api/reschedule-requests', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          setRescheduleRequests(result.data || []);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching reschedule requests:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBookings();
+    fetchRescheduleRequests();
+  }, [filterStatus, fetchBookings, fetchRescheduleRequests]);
 
   const handleConfirmBooking = async (bookingId: string) => {
     try {
@@ -227,6 +249,59 @@ export default function BookingManagementPage() {
     }
   };
 
+  const handleApproveReschedule = async (rescheduleRequestId: string) => {
+    try {
+      setActionLoading(`approve-reschedule-${rescheduleRequestId}`);
+      
+      const response = await fetch(`/api/reschedule-requests/${rescheduleRequestId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to approve reschedule');
+      }
+
+      // Refresh data
+      await fetchBookings();
+      await fetchRescheduleRequests();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to approve reschedule');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectReschedule = async (rescheduleRequestId: string, reason?: string) => {
+    try {
+      setActionLoading(`reject-reschedule-${rescheduleRequestId}`);
+      
+      const response = await fetch(`/api/reschedule-requests/${rescheduleRequestId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reject reschedule');
+      }
+
+      // Refresh data
+      await fetchBookings();
+      await fetchRescheduleRequests();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reject reschedule');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -250,6 +325,8 @@ export default function BookingManagementPage() {
         return <MessageCircle className="h-4 w-4" />;
       case 'phone_call':
         return <Phone className="h-4 w-4" />;
+      case 'both':
+        return <MapPin className="h-4 w-4" />;
       default:
         return <Calendar className="h-4 w-4" />;
     }
@@ -304,37 +381,64 @@ export default function BookingManagementPage() {
           </Alert>
         )}
 
-        {/* Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Filter Bookings</CardTitle>
-            <CardDescription>View bookings by status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2 flex-wrap">
-              {[
-                { value: 'all', label: 'All Bookings' },
-                { value: 'pending', label: 'Pending' },
-                { value: 'confirmed', label: 'Confirmed' },
-                { value: 'rejected', label: 'Rejected' },
-                { value: 'cancelled', label: 'Cancelled' }
-              ].map((filter) => (
-                <Button
-                  key={filter.value}
-                  variant={filterStatus === filter.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus(filter.value)}
-                >
-                  {filter.label}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={!showRescheduleRequests ? "default" : "outline"}
+            onClick={() => setShowRescheduleRequests(false)}
+          >
+            Booking Requests
+          </Button>
+          <Button
+            variant={showRescheduleRequests ? "default" : "outline"}
+            onClick={() => setShowRescheduleRequests(true)}
+            className="gap-2"
+          >
+            Reschedule Requests
+            {rescheduleRequests.length > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {rescheduleRequests.length}
+              </Badge>
+            )}
+          </Button>
+        </div>
+
+        {!showRescheduleRequests && (
+          <>
+            {/* Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Filter Bookings</CardTitle>
+                <CardDescription>View bookings by status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2 flex-wrap">
+                  {[
+                    { value: 'all', label: 'All Bookings' },
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'confirmed', label: 'Confirmed' },
+                    { value: 'rejected', label: 'Rejected' },
+                    { value: 'cancelled', label: 'Cancelled' }
+                  ].map((filter) => (
+                    <Button
+                      key={filter.value}
+                      variant={filterStatus === filter.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setFilterStatus(filter.value)}
+                    >
+                      {filter.label}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
 
         {/* Bookings List */}
-        <div className="space-y-4">
-          {bookings.length === 0 ? (
+        {!showRescheduleRequests ? (
+          <div className="space-y-4">
+            {bookings.length === 0 ? (
             <Card>
               <CardContent className="py-20 text-center space-y-6">
                 <Calendar className="h-16 w-16 mx-auto text-muted-foreground/50" />
@@ -342,7 +446,7 @@ export default function BookingManagementPage() {
                   <h3 className="text-xl font-semibold">No Booking Requests</h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
                     {filterStatus === 'all' 
-                      ? "You don't have any booking requests yet. Patients will see your available slots and can book appointments."
+                      ? "You don&apos;t have any booking requests yet. Patients will see your available slots and can book appointments."
                       : `No ${filterStatus} booking requests found.`
                     }
                   </p>
@@ -387,7 +491,7 @@ export default function BookingManagementPage() {
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                           {getTypeIcon(booking.appointmentType)}
-                          <span>{booking.appointmentType.replace('_', ' ')}</span>
+                          <span>{booking.appointmentType === 'both' ? 'Both Online & Offline' : booking.appointmentType.replace('_', ' ')}</span>
                         </div>
                       </div>
 
@@ -470,7 +574,108 @@ export default function BookingManagementPage() {
               </Card>
             ))
           )}
-        </div>
+          </div>
+        ) : (
+          /* Reschedule Requests Section */
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Patient Reschedule Requests</CardTitle>
+                <CardDescription>
+                  Review and respond to patient reschedule requests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {rescheduleRequests.length === 0 ? (
+                  <div className="text-center py-12 space-y-4">
+                    <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium">No Reschedule Requests</h3>
+                      <p className="text-muted-foreground">
+                        Patient reschedule requests will appear here for your review.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {rescheduleRequests.map((request: RescheduleRequest) => (
+                      <Card key={request.id} className="border-l-4 border-l-orange-500">
+                        <CardContent className="p-6">
+                          <div className="space-y-4">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h4 className="font-semibold">{request.patientName}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  Requested on {format(new Date(request.createdAt), 'PPP')}
+                                </p>
+                              </div>
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                {request.status}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Current Appointment</p>
+                                <p className="font-medium">
+                                  {format(new Date(request.originalDate), 'PPP')} at {request.originalTime}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-muted-foreground">Requested New Time</p>
+                                <p className="font-medium">
+                                  {request.newDate ? format(new Date(request.newDate), 'PPP') : 'Not specified'} 
+                                  {request.newTime ? ` at ${request.newTime}` : ''}
+                                </p>
+                              </div>
+                            </div>
+
+                            {request.reason && (
+                              <div>
+                                <p className="text-sm text-muted-foreground">Reason</p>
+                                <p className="font-medium">{request.reason}</p>
+                              </div>
+                            )}
+
+                            <div className="flex gap-2 pt-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleApproveReschedule(request.id)}
+                                disabled={actionLoading === `approve-reschedule-${request.id}`}
+                                className="gap-2"
+                              >
+                                {actionLoading === `approve-reschedule-${request.id}` ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-4 w-4" />
+                                )}
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleRejectReschedule(request.id)}
+                                disabled={actionLoading === `reject-reschedule-${request.id}`}
+                                className="gap-2"
+                              >
+                                {actionLoading === `reject-reschedule-${request.id}` ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <XCircle className="h-4 w-4" />
+                                )}
+                                Reject & Propose Alternative
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Booking Details Dialog */}
         {selectedBooking && (
@@ -507,6 +712,17 @@ export default function BookingManagementPage() {
                       </Badge>
                     </div>
                   </div>
+                  {selectedBooking.rescheduleCount !== undefined && (
+                    <div className="mt-4 p-3 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground">Reschedule History</p>
+                      <p className="font-medium">
+                        {selectedBooking.rescheduleCount || 0} reschedule(s) made
+                        {selectedBooking.rescheduleCount >= 2 && 
+                          <span className="text-orange-600 ml-2">(Limit: 2)</span>
+                        }
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <Separator />
@@ -529,7 +745,7 @@ export default function BookingManagementPage() {
                       <p className="text-sm text-muted-foreground">Type</p>
                       <div className="flex items-center gap-2">
                         {getTypeIcon(selectedBooking.appointmentType)}
-                        <p className="font-medium">{selectedBooking.appointmentType.replace('_', ' ')}</p>
+                        <p className="font-medium">{selectedBooking.appointmentType === 'both' ? 'Both Online & Offline' : selectedBooking.appointmentType.replace('_', ' ')}</p>
                       </div>
                     </div>
                     <div>

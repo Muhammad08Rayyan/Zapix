@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { connectToDatabase } from '@/lib/db';
 import { DoctorModel } from '@/lib/models';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
@@ -66,7 +66,8 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (typeof defaultPrice !== 'number' || defaultPrice < 0) {
+    const numericPrice = Number(defaultPrice);
+    if (isNaN(numericPrice) || numericPrice < 0) {
       return NextResponse.json({
         success: false,
         error: 'Default price must be a positive number'
@@ -112,7 +113,16 @@ export async function PUT(request: NextRequest) {
       defaultMethod
     };
 
-    doctor.defaultPrice = defaultPrice;
+    doctor.defaultPrice = numericPrice;
+
+    // Mark payment settings as complete in setup progress
+    if (!doctor.setupProgress) {
+      doctor.setupProgress = {
+        paymentSettings: false,
+        businessNumber: false
+      };
+    }
+    doctor.setupProgress.paymentSettings = true;
 
     await doctor.save();
 

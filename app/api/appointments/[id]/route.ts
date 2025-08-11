@@ -6,7 +6,7 @@ import { AppointmentModel, SlotModel, PatientModel } from '@/lib/models';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,8 @@ export async function GET(
 
     await connectToDatabase();
 
-    const appointment = await AppointmentModel.findById(params.id);
+    const resolvedParams = await params;
+    const appointment = await AppointmentModel.findById(resolvedParams.id);
     
     if (!appointment || appointment.doctorId !== session.user.doctorId) {
       return NextResponse.json({
@@ -59,7 +60,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -70,10 +71,11 @@ export async function PUT(
 
     await connectToDatabase();
 
+    const resolvedParams = await params;
     const body = await request.json();
     const { status, type, notes, paymentReceiptUrl, documents } = body;
 
-    const appointment = await AppointmentModel.findById(params.id);
+    const appointment = await AppointmentModel.findById(resolvedParams.id);
     
     if (!appointment || appointment.doctorId !== session.user.doctorId) {
       return NextResponse.json({
@@ -125,7 +127,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -136,7 +138,8 @@ export async function DELETE(
 
     await connectToDatabase();
 
-    const appointment = await AppointmentModel.findById(params.id);
+    const resolvedParams = await params;
+    const appointment = await AppointmentModel.findById(resolvedParams.id);
     
     if (!appointment || appointment.doctorId !== session.user.doctorId) {
       return NextResponse.json({
@@ -153,7 +156,7 @@ export async function DELETE(
       }, { status: 400 });
     }
 
-    await AppointmentModel.findByIdAndDelete(params.id);
+    await AppointmentModel.findByIdAndDelete(resolvedParams.id);
 
     return NextResponse.json({
       success: true,

@@ -6,7 +6,7 @@ import { SlotBookingModel } from '@/lib/models';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,8 @@ export async function POST(
 
     await connectToDatabase();
 
-    const booking = await SlotBookingModel.findById(params.id);
+    const resolvedParams = await params;
+    const booking = await SlotBookingModel.findById(resolvedParams.id);
     
     if (!booking || booking.doctorId !== session.user.doctorId) {
       return NextResponse.json({

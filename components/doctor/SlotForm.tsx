@@ -4,23 +4,19 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
 import { CalendarIcon, Clock, Loader2, MapPin, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { CreateSlotForm, SlotType, Slot } from "@/types";
+import { ValidatedNumberInput } from "@/components/ui/validated-number-input";
+import { CreateSlotForm, Slot } from "@/types";
 
 const slotFormSchema = z.object({
   dayOfWeek: z.number().min(0, "Please select a day").max(6, "Invalid day selection"),
   startTime: z.string().min(1, "Start time is required"),
   duration: z.number().min(15, "Duration must be at least 15 minutes").max(180, "Duration cannot exceed 3 hours"),
-  type: z.enum(["in_person", "video_call", "phone_call"]),
+  type: z.enum(["in_person", "video_call", "phone_call", "both"]),
   address: z.string().optional(),
   price: z.number().min(0, "Price must be a positive number"),
 });
@@ -33,9 +29,10 @@ interface SlotFormProps {
   initialData?: Slot;
   isEditing?: boolean;
   error?: string | null;
+  defaultPrice?: number;
 }
 
-export default function SlotForm({ onSubmit, onCancel, initialData, isEditing = false, error }: SlotFormProps) {
+export default function SlotForm({ onSubmit, onCancel, initialData, isEditing = false, error, defaultPrice = 3000 }: SlotFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<SlotFormData>({
@@ -46,7 +43,7 @@ export default function SlotForm({ onSubmit, onCancel, initialData, isEditing = 
       duration: initialData?.duration || 30,
       type: initialData?.type || "in_person",
       address: initialData?.address || "",
-      price: initialData?.price ? Number(initialData.price) : 0,
+      price: initialData?.price ? Number(initialData.price) : defaultPrice,
     },
   });
 
@@ -60,7 +57,7 @@ export default function SlotForm({ onSubmit, onCancel, initialData, isEditing = 
         startTime: data.startTime,
         duration: data.duration,
         type: data.type,
-        address: data.type === "in_person" ? data.address : undefined,
+        address: (data.type === "in_person" || data.type === "both") ? data.address : undefined,
         price: data.price,
       };
       
@@ -206,18 +203,17 @@ export default function SlotForm({ onSubmit, onCancel, initialData, isEditing = 
               <FormItem>
                 <FormLabel>Price (PKR)</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="number"
-                    min="0"
-                    step="50"
-                    placeholder="e.g. 2000"
-                    value={field.value || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value === '' ? 0 : parseFloat(value) || 0);
-                    }}
+                  <ValidatedNumberInput 
+                    value={field.value || 0}
+                    onChange={(value) => field.onChange(value)}
+                    min={0}
+                    placeholder={String(defaultPrice)}
+                    allowDecimals={true}
                   />
                 </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Default: Rs. {defaultPrice.toLocaleString('en-PK')} (customizable per slot)
+                </p>
                 <FormMessage />
               </FormItem>
             )}
@@ -256,6 +252,12 @@ export default function SlotForm({ onSubmit, onCancel, initialData, isEditing = 
                       Phone Call
                     </div>
                   </SelectItem>
+                  <SelectItem value="both">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Both Online & Offline
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -263,21 +265,32 @@ export default function SlotForm({ onSubmit, onCancel, initialData, isEditing = 
           )}
         />
 
-        {/* Address (only for in-person appointments) */}
-        {selectedType === "in_person" && (
+        {/* Address (for in-person and both appointments) */}
+        {(selectedType === "in_person" || selectedType === "both") && (
           <FormField
             control={form.control}
             name="address"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Clinic Address</FormLabel>
+                <FormLabel>
+                  {selectedType === "both" ? "Address (for offline option)" : "Clinic Address"}
+                </FormLabel>
                 <FormControl>
                   <Textarea 
-                    placeholder="Enter the address where appointments will take place"
+                    placeholder={
+                      selectedType === "both" 
+                        ? "Enter clinic address for patients who choose offline appointment"
+                        : "Enter the address where appointments will take place"
+                    }
                     className="min-h-[80px] resize-none"
                     {...field}
                   />
                 </FormControl>
+                {selectedType === "both" && (
+                  <p className="text-xs text-muted-foreground">
+                    This address will be shown to patients who choose the offline option for this slot.
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}

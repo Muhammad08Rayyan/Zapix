@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Zap, Eye, EyeOff, ArrowLeft, Mail, Lock, User, Phone, Stethoscope } from "lucide-react";
+import { Zap, Eye, EyeOff, ArrowLeft, Mail, Lock, User, Stethoscope } from "lucide-react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [signupData, setSignupData] = useState({
     name: "",
     email: "",
-    phone: "",
     password: "",
     confirmPassword: ""
   });
@@ -74,7 +73,6 @@ export default function LoginPage() {
         body: JSON.stringify({
           name: signupData.name,
           email: signupData.email,
-          phone: signupData.phone,
           password: signupData.password,
         }),
       });
@@ -267,23 +265,6 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium">
-                      Phone number
-                    </Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+92 300 1234567"
-                        value={signupData.phone}
-                        onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                        required
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-sm font-medium">

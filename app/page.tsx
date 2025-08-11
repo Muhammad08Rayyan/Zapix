@@ -6,10 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Calendar, Users, MessageSquare, FileText, Shield, Zap, Mail, Send, Sun, Moon, Info, ShieldCheck, Sparkles } from "lucide-react";
+import { CheckCircle, Calendar, Users, MessageSquare, Zap, Mail, Send, Sun, Moon, ShieldCheck, Sparkles } from "lucide-react";
+import { FeaturesSectionWithHoverEffects } from "@/components/feature-section-with-hover-effects";
+import { PricingSection } from "@/components/pricing-section";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useTheme } from "next-themes";
+import { useSession } from "next-auth/react";
+import { SearchParamsHandler } from "@/components/search-params-handler";
 
 export default function HomePage() {
   const [formData, setFormData] = useState({
@@ -20,6 +24,7 @@ export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { data: session } = useSession();
 
   useEffect(() => {
     setMounted(true);
@@ -70,75 +75,13 @@ export default function HomePage() {
     return null;
   }
 
-  const conversationTooltipText =
-    "A 'conversation' follows WhatsApp Business's 24-hour session window: once a patient or your bot sends the first message, a 24-hour window opens and all messages in that window count as a single conversation. When the window expires and messaging resumes, it counts as a new conversation.";
 
-  function ConversationFeature({ featureText }: { featureText: string }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const containerRef = useRef<HTMLSpanElement | null>(null);
-
-    useEffect(() => {
-      const handlePointerDown = (e: MouseEvent | TouchEvent | PointerEvent) => {
-        const target = e.target as Node;
-        if (containerRef.current && !containerRef.current.contains(target)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener("pointerdown", handlePointerDown);
-      return () => document.removeEventListener("pointerdown", handlePointerDown);
-    }, []);
-
-    const toggleOpen = () => setIsOpen((prev) => !prev);
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        toggleOpen();
-      } else if (e.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    return (
-      <span
-        ref={containerRef}
-        className="relative group inline-flex items-center"
-        role="button"
-        tabIndex={0}
-        aria-expanded={isOpen}
-        onClick={toggleOpen}
-        onKeyDown={handleKeyDown}
-      >
-        <span className="underline decoration-dotted underline-offset-2 cursor-pointer">{featureText}</span>
-        <Info className={`ml-1 h-3.5 w-3.5 transition-colors ${isOpen ? "text-primary" : "text-muted-foreground/80"} group-hover:text-primary`} />
-        <span className={`pointer-events-none absolute left-0 top-full mt-2 max-w-xs rounded-md border bg-background p-3 text-xs shadow-lg transition-all duration-200 z-20 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 ${isOpen ? "opacity-100 translate-y-0" : ""}`}>
-          {conversationTooltipText}
-        </span>
-      </span>
-    );
-  }
-
-  const renderFeatureItem = (feature: string, index: number) => {
-    const isConversationItem = /conversation/i.test(feature);
-    if (!isConversationItem) {
-      return (
-        <li key={index} className="flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-primary" />
-          <span>{feature}</span>
-        </li>
-      );
-    }
-
-    return (
-      <li key={index} className="flex items-center gap-2">
-        <CheckCircle className="w-4 h-4 text-primary" />
-        <ConversationFeature featureText={feature} />
-      </li>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <Suspense fallback={null}>
+        <SearchParamsHandler mounted={mounted} />
+      </Suspense>
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -156,21 +99,21 @@ export default function HomePage() {
           <nav className="hidden md:flex space-x-6">
             <button 
               onClick={() => scrollToSection('features')} 
-              className="text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group"
+              className="text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group cursor-pointer"
             >
               Features
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-200 group-hover:w-full"></span>
             </button>
             <button 
               onClick={() => scrollToSection('pricing')} 
-              className="text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group"
+              className="text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group cursor-pointer"
             >
               Pricing
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-200 group-hover:w-full"></span>
             </button>
             <button 
               onClick={() => scrollToSection('contact')} 
-              className="text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group"
+              className="text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group cursor-pointer"
             >
               Contact
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-200 group-hover:w-full"></span>
@@ -190,7 +133,9 @@ export default function HomePage() {
               )}
             </Button>
             <Button variant="outline" asChild className="transition-all duration-200 hover:scale-105 hover:shadow-lg">
-              <Link href="/login">Login</Link>
+              <Link href={session?.user?.role === "doctor" ? "/doctor" : "/login"}>
+                {session?.user?.role === "doctor" ? "Dashboard" : "Login"}
+              </Link>
             </Button>
           </div>
         </div>
@@ -212,35 +157,35 @@ export default function HomePage() {
                 <Sparkles className="h-4 w-4 text-primary" /> New in 2025
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-                WhatsApp-native
+                Transform Patient Care
                 <br />
-                <span className="bg-gradient-to-r from-primary via-emerald-400 to-primary/80 bg-clip-text text-transparent">Doctor Appointments</span>
+                <span className="bg-gradient-to-r from-primary via-emerald-400 to-primary/80 bg-clip-text text-transparent">Through WhatsApp</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-xl">
-                Automate bookings, reminders, and payments with a bot your patients already use. Less admin. More care.
+                Automate appointments, payments, and patient communication through WhatsApp Business. Reduce no-shows by 80% and save 5+ hours daily.
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <Button size="lg" asChild className="transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                  <button onClick={() => scrollToSection('features')}>
-                    See Features
-                  </button>
+                <Button size="lg" onClick={() => scrollToSection('features')} className="transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer">
+                  See Features
                 </Button>
-                <Button size="lg" variant="outline" asChild className="transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                  <Link href="/login">Launch Dashboard</Link>
+                <Button size="lg" variant="outline" asChild className="transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer">
+                  <Link href={session?.user?.role === "doctor" ? "/doctor" : "/login"}>
+                    {session?.user?.role === "doctor" ? "Go to Dashboard" : "Try It Out"}
+                  </Link>
                 </Button>
               </div>
 
               {/* trust bar */}
               <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-primary" /> Secure by design
+                  <ShieldCheck className="h-4 w-4 text-primary" /> HIPAA Compliant
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-primary" /> Payment-ready
+                  <CheckCircle className="h-4 w-4 text-primary" /> 500+ Doctors Trust Us
                 </div>
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-primary" /> Built on WhatsApp
+                  <MessageSquare className="h-4 w-4 text-primary" /> WhatsApp Business Verified
                 </div>
               </div>
             </div>
@@ -255,22 +200,22 @@ export default function HomePage() {
                 <div className="border-t">
                   <div className="p-4 space-y-3 max-h-[22rem] overflow-hidden">
                     <div className="w-9/12 rounded-2xl bg-muted p-3 animate-[fadeIn_0.6s_ease-out_forwards]">
-                      Hi! I’d like to book an appointment.
+                      Hi Dr. Ahmed! Need to book urgently
                     </div>
                     <div className="w-10/12 rounded-2xl bg-primary text-primary-foreground ml-auto p-3 animate-[fadeIn_0.6s_ease-out_0.1s_forwards]">
-                      Sure! What specialty and preferred date?
+                      Hello! I can help you book instantly. What&apos;s your preferred time?
                     </div>
                     <div className="w-7/12 rounded-2xl bg-muted p-3 animate-[fadeIn_0.6s_ease-out_0.2s_forwards]">
-                      Dermatology, this Friday.
+                      Tomorrow 3 PM?
                     </div>
                     <div className="w-11/12 rounded-2xl bg-primary text-primary-foreground ml-auto p-3 animate-[fadeIn_0.6s_ease-out_0.3s_forwards]">
-                      Available at 11:30 AM. Confirm and pay now?
+                      Perfect! ₨2,000 consultation. Pay via JazzCash?
                     </div>
                     <div className="w-8/12 rounded-2xl bg-muted p-3 animate-[fadeIn_0.6s_ease-out_0.4s_forwards]">
-                      Yes, confirm.
+                      Yes, sending payment
                     </div>
                     <div className="w-11/12 rounded-2xl bg-primary text-primary-foreground ml-auto p-3 animate-[fadeIn_0.6s_ease-out_0.5s_forwards]">
-                      Done! You’ll get reminders and the receipt here. ✅
+                      Booked! Reminder sent. See you tomorrow at 3 PM ✅
                     </div>
                   </div>
                 </div>
@@ -295,53 +240,32 @@ export default function HomePage() {
       <section id="features" className="py-20 px-4 bg-muted/30">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Features</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to manage appointments and patient communication through WhatsApp
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Transform Your Medical Practice</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Comprehensive WhatsApp automation that handles everything from appointments to payments, letting you focus on what matters most - your patients.
             </p>
           </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              { icon: MessageSquare, title: "WhatsApp Integration", description: "Native WhatsApp Business API integration for seamless patient communication" },
-              { icon: Calendar, title: "Smart Booking System", description: "Automated appointment scheduling with real-time availability and conflict prevention" },
-              { icon: Users, title: "Patient Management", description: "Complete EMR system with patient history, documents, and medical records" },
-              { icon: MessageSquare, title: "Payment Processing", description: "Accept payments via JazzCash, EasyPaisa, and bank transfers with receipt verification" },
-              { icon: FileText, title: "Document Handling", description: "Secure document upload, storage, and sharing through WhatsApp" },
-              { icon: Shield, title: "Admin Dashboard", description: "Comprehensive admin panel for managing doctors, patients, and system settings" }
-            ].map((feature, index) => {
-              const IconComponent = feature.icon;
-              return (
-                <Card key={index} className="group transition-all duration-300 hover:shadow-xl hover:-translate-y-2 cursor-pointer">
-                  <CardHeader>
-                    <IconComponent className="w-8 h-8 text-primary mb-2 transition-transform group-hover:scale-110 duration-200" />
-                    <CardTitle className="group-hover:text-primary transition-colors duration-200">{feature.title}</CardTitle>
-                    <CardDescription>
-                      {feature.description}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              );
-            })}
-          </div>
+          <FeaturesSectionWithHoverEffects />
         </div>
       </section>
+
+      <PricingSection onButtonClick={() => scrollToSection('contact')} />
 
       {/* How it Works */}
       <section className="py-20 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-muted-foreground">Simple steps to revolutionize your practice</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">From Chaos to Calm in 3 Steps</h2>
+            <p className="text-xl text-muted-foreground">Go from overwhelmed to organized in just 15 minutes</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { step: "1", title: "Patient Contacts", description: "Patient sends message to your WhatsApp Business number" },
-              { step: "2", title: "AI Handles Booking", description: "Bot guides patient through registration, slot selection, and payment" },
-              { step: "3", title: "Doctor Manages", description: "Doctor reviews, confirms, and manages appointments through dashboard" }
+              { step: "1", title: "Patient Texts You", description: "Your patients contact your existing WhatsApp Business number as they always do" },
+              { step: "2", title: "Zapix Takes Over", description: "Our AI bot instantly books appointments, collects payments, and sends confirmations" },
+              { step: "3", title: "You Focus on Care", description: "Review appointments in your dashboard while the bot handles reminders and follow-ups" }
             ].map((item, index) => (
-              <div key={index} className="text-center group">
+              <div key={index} className="text-center group cursor-pointer">
                 <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg">
                   <span className="text-2xl font-bold text-primary-foreground">{item.step}</span>
                 </div>
@@ -353,110 +277,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4 bg-muted/30">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple Pricing</h2>
-            <p className="text-xl text-muted-foreground">Choose the plan that fits your practice</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="flex flex-col">
-              <CardHeader>
-                <CardTitle>Basic</CardTitle>
-                <CardDescription>Perfect for solo practitioners</CardDescription>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">₨10,000</span>
-                  <span className="text-muted-foreground">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-between">
-                <ul className="space-y-2 mb-6">
-                  {[
-                    "1,000 WhatsApp conversations/month",
-                    "Unlimited appointments",
-                    "Basic patient management",
-                    "Payment processing",
-                    "Email support"
-                  ].map((feature, index) => renderFeatureItem(feature, index))}
-                </ul>
-                <Button className="w-full transition-all duration-300 hover:scale-105 hover:shadow-lg">
-                  Get Started
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-primary relative overflow-hidden flex flex-col">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent"></div>
-              <CardHeader className="relative">
-                <Badge className="w-fit mb-2 animate-pulse">Most Popular</Badge>
-                <CardTitle>Premium</CardTitle>
-                <CardDescription>For growing practices</CardDescription>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">₨15,000</span>
-                  <span className="text-muted-foreground">/month</span>
-                </div>
-              </CardHeader>
-              <CardContent className="relative flex-grow flex flex-col justify-between">
-                <ul className="space-y-2 mb-6">
-                  {[
-                    "2,500 WhatsApp conversations/month",
-                    "Unlimited appointments",
-                    "Advanced EMR features",
-                    "Document management",
-                    "Analytics & reporting",
-                    "Priority support"
-                  ].map((feature, index) => renderFeatureItem(feature, index))}
-                </ul>
-                <Button className="w-full transition-all duration-300 hover:scale-105 hover:shadow-lg">
-                  Get Started
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="flex flex-col">
-              <CardHeader>
-                <CardTitle>Enterprise</CardTitle>
-                <CardDescription>For clinics and hospitals</CardDescription>
-                <div className="mt-4">
-                  <span className="text-3xl font-bold">Custom</span>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-between">
-                <ul className="space-y-2 mb-6">
-                  {[
-                    "Custom conversation limits",
-                    "Unlimited appointments",
-                    "Multiple doctors support",
-                    "Custom integrations",
-                    "Dedicated account manager",
-                    "24/7 phone support"
-                  ].map((feature, index) => renderFeatureItem(feature, index))}
-                </ul>
-                <Button className="w-full transition-all duration-300 hover:scale-105 hover:shadow-lg" variant="outline">
-                  Contact Sales
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
       {/* Contact Section */}
       <section id="contact" className="py-20 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Get Started?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Practice?</h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Transform your medical practice today. Contact us for a personalized demo and setup assistance.
+              Get your WhatsApp bot setup in 24 hours. We&apos;ll connect it to your existing WhatsApp Business number.
             </p>
           </div>
           
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Contact Info */}
             <div className="space-y-6">
-              <Card className="transition-all duration-300 hover:shadow-lg group">
+              <Card className="transition-all duration-300 hover:shadow-lg group cursor-pointer">
                 <CardContent className="pt-6 text-center">
                   <MessageSquare className="w-8 h-8 text-primary mx-auto mb-2 transition-transform group-hover:scale-110 duration-200" />
                   <h3 className="font-semibold mb-1">WhatsApp</h3>
@@ -464,7 +298,7 @@ export default function HomePage() {
                 </CardContent>
               </Card>
               
-              <Card className="transition-all duration-300 hover:shadow-lg group">
+              <Card className="transition-all duration-300 hover:shadow-lg group cursor-pointer">
                 <CardContent className="pt-6 text-center">
                   <Mail className="w-8 h-8 text-primary mx-auto mb-2 transition-transform group-hover:scale-110 duration-200" />
                   <h3 className="font-semibold mb-1">Email</h3>
@@ -477,8 +311,8 @@ export default function HomePage() {
             <div>
               <Card className="transition-all duration-300 hover:shadow-xl">
                 <CardHeader>
-                  <CardTitle>Send us a message</CardTitle>
-                  <CardDescription>We&apos;ll get back to you within 24 hours</CardDescription>
+                  <CardTitle>Get Your WhatsApp Bot Setup</CardTitle>
+                  <CardDescription>We&apos;ll set up your appointment bot within 24 hours</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-4">
@@ -509,7 +343,7 @@ export default function HomePage() {
                       <Label htmlFor="message">Message *</Label>
                       <Textarea
                         id="message"
-                        placeholder="Tell us about your practice and how we can help..."
+                        placeholder="Tell us about your practice size, patient volume, and your WhatsApp Business number if you have one..."
                         value={formData.message}
                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                         required
@@ -574,8 +408,8 @@ export default function HomePage() {
             </div>
 
             <div className="flex space-x-6 text-sm text-muted-foreground">
-              <Link href="/privacy" className="hover:text-foreground transition-all duration-200 hover:scale-105">Privacy Policy</Link>
-              <Link href="/terms" className="hover:text-foreground transition-all duration-200 hover:scale-105">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-foreground transition-all duration-200 hover:scale-105 cursor-pointer">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-foreground transition-all duration-200 hover:scale-105 cursor-pointer">Terms of Service</Link>
             </div>
           </div>
         </div>

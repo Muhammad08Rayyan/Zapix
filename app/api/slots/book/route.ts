@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       if (isNaN(bookingDate.getTime())) {
         throw new Error('Invalid date');
       }
-    } catch (error) {
+    } catch {
       return NextResponse.json({
         success: false,
         error: 'Invalid date format. Use YYYY-MM-DD'
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
 
     await connectToDatabase();
 
-    const query: any = {};
+    const query: Record<string, unknown> = {};
     if (doctorId) query.doctorId = doctorId;
     if (patientId) query.patientId = patientId;
     if (date) query.date = date;

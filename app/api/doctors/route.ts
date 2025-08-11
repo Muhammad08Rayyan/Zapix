@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db";
 import { DoctorModel } from "@/lib/models";
+import { getPlanConfig } from "@/lib/plan-config";
 import bcryptjs from "bcryptjs";
 
 export async function GET(request: NextRequest) {
@@ -49,12 +50,8 @@ export async function GET(request: NextRequest) {
     }));
 
     function getMessageLimitForPlan(plan: string) {
-      switch (plan) {
-        case 'basic': return 1000;
-        case 'premium': return 2500;
-        case 'custom': return 10000;
-        default: return 1000;
-      }
+      const config = getPlanConfig(plan as 'essential' | 'pro' | 'custom' | 'none');
+      return config?.messageAllowance || 0;
     }
     
     return NextResponse.json({ doctors: doctorsWithId }, { status: 200 });
@@ -71,11 +68,11 @@ export async function POST(request: NextRequest) {
   try {
     await connectToDatabase();
     
-    const { name, email, phone, plan } = await request.json();
+    const { name, email, phone } = await request.json();
     
-    if (!name || !email || !phone || !plan) {
+    if (!name || !email || !phone) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "Name, email, and phone are required" },
         { status: 400 }
       );
     }
@@ -96,13 +93,25 @@ export async function POST(request: NextRequest) {
     const tempPassword = Math.random().toString(36).slice(-8);
     const hashedPassword = await bcryptjs.hash(tempPassword, 10);
     
+    // Create doctor with neutral defaults - admin will assign plan later
     const doctor = new DoctorModel({
       name,
       email,
       phone,
-      plan,
       password: hashedPassword,
-      active: true
+      // Defaults: plan: 'none', active: false (from schema)
+      limits: {
+        maxAppointmentsPerDay: 10,
+        maxReschedules: 2,
+        advanceBookingDays: 30,
+        cancellationHours: 24
+      },
+      messageStats: {
+        monthlyLimit: 0,
+        currentMonth: new Date().toISOString().slice(0, 7),
+        messagesUsed: 0,
+        lastResetDate: new Date()
+      }
     });
     
     await doctor.save();

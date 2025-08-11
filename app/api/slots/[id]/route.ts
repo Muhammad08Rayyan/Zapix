@@ -7,7 +7,7 @@ import { CreateSlotForm } from '@/types';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,8 +18,9 @@ export async function GET(
 
     await connectToDatabase();
 
+    const resolvedParams = await params;
     const slot = await SlotModel.findOne({
-      _id: params.id,
+      _id: resolvedParams.id,
       doctorId: session.user.doctorId
     });
 
@@ -49,7 +50,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -79,9 +80,11 @@ export async function PUT(
       }, { status: 400 });
     }
 
+    const resolvedParams = await params;
+    
     // Find the existing slot
     const existingSlot = await SlotModel.findOne({
-      _id: params.id,
+      _id: resolvedParams.id,
       doctorId: session.user.doctorId
     });
 
@@ -101,7 +104,7 @@ export async function PUT(
     
     // Get all other slots for this day (excluding current slot)
     const existingSlots = await SlotModel.find({
-      _id: { $ne: params.id },
+      _id: { $ne: resolvedParams.id },
       doctorId: session.user.doctorId,
       dayOfWeek: body.dayOfWeek
     });
@@ -135,7 +138,7 @@ export async function PUT(
 
     // Update the weekly slot
     const updatedSlot = await SlotModel.findByIdAndUpdate(
-      params.id,
+      resolvedParams.id,
       {
         dayOfWeek: body.dayOfWeek,
         startTime: body.startTime,
@@ -167,7 +170,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -178,9 +181,11 @@ export async function DELETE(
 
     await connectToDatabase();
 
+    const resolvedParams = await params;
+    
     // Find the slot
     const slot = await SlotModel.findOne({
-      _id: params.id,
+      _id: resolvedParams.id,
       doctorId: session.user.doctorId
     });
 
@@ -193,7 +198,7 @@ export async function DELETE(
 
     // Check if slot has appointments
     const appointments = await AppointmentModel.find({
-      slotId: params.id,
+      slotId: resolvedParams.id,
       status: { $nin: ['cancelled', 'completed'] }
     });
 
@@ -205,7 +210,7 @@ export async function DELETE(
     }
 
     // Delete the slot
-    await SlotModel.findByIdAndDelete(params.id);
+    await SlotModel.findByIdAndDelete(resolvedParams.id);
 
     return NextResponse.json({
       success: true,

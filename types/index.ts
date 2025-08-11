@@ -1,27 +1,37 @@
 export interface Doctor {
   id: string;
   name: string;
-  phone: string;
+  phone?: string;
   email: string;
   password: string;
   plan: DoctorPlan;
+  planAssignedDate?: Date;
+  planExpiryDate?: Date;
   active: boolean;
   paymentDetails?: PaymentDetails;
   limits: DoctorLimits;
   messageStats: MessageStats;
+  personalPhone?: string;
+  businessPhone?: string;
+  notificationSettings?: NotificationSettings;
   defaultPrice?: number;
+  setupProgress?: SetupProgress;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export interface Patient {
   id: string;
+  patientId: string; // e.g., PT001, PT002, etc.
   name: string;
   age: number;
   gender: 'male' | 'female' | 'other';
   phone: string;
   medicalHistory: string[];
   doctorId: string;
+  privateNotes?: string;
+  documents?: string[];
+  upcomingAppointments?: Appointment[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +46,8 @@ export interface Appointment {
   documents: string[];
   notes: string;
   paymentReceiptUrl?: string;
+  rescheduleCount?: number;
+  rescheduleRequests?: RescheduleRequest[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +78,23 @@ export interface SlotBooking {
   updatedAt: Date;
 }
 
+export interface RescheduleRequest {
+  id: string;
+  appointmentId: string;
+  requestedBy: 'patient' | 'doctor';
+  patientName: string;
+  originalDate: string;
+  originalTime: string;
+  newDate?: string;
+  newTime?: string;
+  newSlotId?: string;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  doctorResponse?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Admin {
   id: string;
   email: string;
@@ -92,12 +121,12 @@ export interface Message {
   type: MessageType;
   direction: 'inbound' | 'outbound';
   status: MessageStatus;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
 }
 
 // Enums and supporting types
-export type DoctorPlan = 'basic' | 'premium' | 'custom';
+export type DoctorPlan = 'none' | 'essential' | 'pro' | 'custom';
 
 export type AppointmentStatus = 
   | 'pending' 
@@ -116,7 +145,8 @@ export type AppointmentType =
 export type SlotType = 
   | 'in_person' 
   | 'video_call' 
-  | 'phone_call';
+  | 'phone_call'
+  | 'both';
 
 export type MessageType = 
   | 'text' 
@@ -175,6 +205,17 @@ export interface WhatsAppConfig {
   phoneNumberId: string;
   businessAccountId: string;
   webhookVerifyToken: string;
+}
+
+export interface NotificationSettings {
+  appointmentReminders: boolean;
+  bookingNotifications: boolean;
+  emergencyAlerts: boolean;
+}
+
+export interface SetupProgress {
+  paymentSettings: boolean;
+  businessNumber: boolean;
 }
 
 // API Response types

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     await connectToDatabase();
 
-    const query: any = { doctorId: session.user.doctorId };
+    const query: Record<string, unknown> = { doctorId: session.user.doctorId };
     if (status && status !== 'all') {
       query.status = status;
     }
@@ -51,12 +51,14 @@ export async function GET(request: NextRequest) {
           duration: slot.duration,
           price: slot.price,
           address: slot.address,
-          paymentReceiptUrl: undefined, // TODO: Add payment receipt URL
-          documents: [], // TODO: Add patient documents
-          notes: '', // TODO: Add booking notes
-          symptoms: '', // TODO: Add symptoms from booking
+          paymentReceiptUrl: booking.paymentReceiptUrl || undefined,
+          documents: booking.documents || [],
+          notes: booking.notes || '',
+          symptoms: booking.symptoms || '',
           medicalHistory: patient.medicalHistory || [],
           status: booking.status === 'booked' ? 'pending' : booking.status === 'completed' ? 'confirmed' : booking.status,
+          rescheduleCount: booking.rescheduleCount || 0,
+          rescheduleRequests: [], // TODO: Populate if needed
           createdAt: booking.createdAt,
           slotId: booking.slotId
         };

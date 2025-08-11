@@ -28,10 +28,13 @@ export class SlotsAPI {
     }
 
     // Transform MongoDB _id to id for frontend
-    return (result.data || []).map(slot => ({
-      ...slot,
-      id: slot.id || (slot as any)._id?.toString()
-    }));
+    return (result.data || []).map(slot => {
+      const transformedSlot = {
+        ...slot,
+        id: slot.id || (slot as { _id?: { toString(): string } })._id?.toString() || ''
+      };
+      return transformedSlot as Slot;
+    });
   }
 
   static async createSlot(data: CreateSlotForm): Promise<Slot> {
@@ -55,7 +58,7 @@ export class SlotsAPI {
 
     return {
       ...result.data,
-      id: result.data.id || (result.data as any)._id?.toString()
+      id: result.data.id || (result.data as { _id?: { toString(): string } })._id?.toString() || ''
     };
   }
 
@@ -80,7 +83,7 @@ export class SlotsAPI {
 
     return {
       ...result.data,
-      id: result.data.id || (result.data as any)._id?.toString()
+      id: result.data.id || (result.data as { _id?: { toString(): string } })._id?.toString() || ''
     };
   }
 
@@ -123,7 +126,7 @@ export class SlotsAPI {
 
     return {
       ...result.data,
-      id: result.data.id || (result.data as any)._id?.toString()
+      id: result.data.id || (result.data as { _id?: { toString(): string } })._id?.toString() || ''
     };
   }
 }

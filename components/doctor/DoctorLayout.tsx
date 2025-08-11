@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Zap, 
-  Calendar, 
   Users, 
-  MessageSquare, 
   Settings, 
   LogOut,
   Sun, 
@@ -16,17 +14,21 @@ import {
   X,
   Plus,
   Activity,
-  FileText,
-  CreditCard,
   User,
   DollarSign,
-  Clock
+  Clock,
+  AlertTriangle,
+  Lock,
+  MessageCircle
 } from "lucide-react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { Doctor } from "@/types";
+import { checkPlanStatus, shouldRestrictAccess, getPlanStatusMessage } from "@/lib/plan-utils";
+import { getPlanConfig } from "@/lib/plan-config";
 
 interface DoctorLayoutProps {
   children: ReactNode;
@@ -46,12 +48,6 @@ const sidebarItems = [
     description: "Booking Requests"
   },
   {
-    title: "Appointments",
-    href: "/doctor/appointments",
-    icon: Calendar,
-    description: "Confirmed Appointments"
-  },
-  {
     title: "Patients",
     href: "/doctor/patients", 
     icon: Users,
@@ -64,28 +60,10 @@ const sidebarItems = [
     description: "Availability Management"
   },
   {
-    title: "Messages",
-    href: "/doctor/messages",
-    icon: MessageSquare,
-    description: "WhatsApp Communications"
-  },
-  {
-    title: "Documents",
-    href: "/doctor/documents",
-    icon: FileText,
-    description: "Files & Records"
-  },
-  {
     title: "Payment Settings",
     href: "/doctor/payment-settings",
     icon: DollarSign,
     description: "Payment Methods & Pricing"
-  },
-  {
-    title: "Billing",
-    href: "/doctor/billing",
-    icon: CreditCard,
-    description: "Payments & Invoices"
   },
   {
     title: "Settings",
@@ -100,13 +78,45 @@ export default function DoctorLayout({ children }: DoctorLayoutProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted || status === "loading") {
+  useEffect(() => {
+    const fetchDoctor = async () => {
+      if (!session?.user?.doctorId) return;
+      
+      try {
+        const response = await fetch(`/api/doctors/${session.user.doctorId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setDoctor(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching doctor data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (session?.user?.doctorId) {
+      fetchDoctor();
+    }
+  }, [session]);
+
+  // Redirect to dashboard if accessing restricted page without active plan
+  useEffect(() => {
+    if (doctor && shouldRestrictAccess(doctor) && pathname !== '/doctor') {
+      router.push('/doctor');
+    }
+  }, [doctor, pathname, router]);
+
+  if (!mounted || status === "loading" || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
@@ -117,6 +127,14 @@ export default function DoctorLayout({ children }: DoctorLayoutProps) {
   if (!session || session.user?.role !== "doctor") {
     return null;
   }
+
+  const restrictAccess = shouldRestrictAccess(doctor);
+  const planStatus = checkPlanStatus(doctor);
+  const planConfig = doctor ? getPlanConfig(doctor.plan) : null;
+
+  const handleContactAdmin = () => {
+    router.push('/?scrollTo=contact');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,11 +176,46 @@ export default function DoctorLayout({ children }: DoctorLayoutProps) {
             </Button>
           </div>
 
+          {/* Plan Status Notice */}
+          {restrictAccess && (
+            <div className="mx-4 mb-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
+                    Plan Required
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    {getPlanStatusMessage(doctor)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2">
             {sidebarItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
+              const isRestricted = restrictAccess && item.href !== '/doctor';
+              
+              if (isRestricted) {
+                return (
+                  <div
+                    key={item.href}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg opacity-50 cursor-not-allowed"
+                  >
+                    <Lock className="h-5 w-5 text-sidebar-foreground" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-sidebar-foreground">{item.title}</p>
+                      <p className="text-xs text-sidebar-foreground/70">
+                        Requires active plan
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
               
               return (
                 <Link
@@ -246,10 +299,39 @@ export default function DoctorLayout({ children }: DoctorLayoutProps) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Badge className="bg-green-50 text-green-600 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                Premium Plan
-              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleContactAdmin}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Contact Admin
+              </Button>
+              {planStatus.hasValidPlan ? (
+                <Badge className={`${
+                  planStatus.isActive && !planStatus.isExpired
+                    ? "bg-green-50 text-green-600 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
+                    : "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800"
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    planStatus.isActive && !planStatus.isExpired
+                      ? "bg-green-500 animate-pulse"
+                      : "bg-amber-500"
+                  }`}></div>
+                  {planStatus.isExpired 
+                    ? "Plan Expired"
+                    : planStatus.isActive 
+                      ? `${planConfig?.displayName} Plan`
+                      : "Plan Inactive"
+                  }
+                </Badge>
+              ) : (
+                <Badge className="bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-950 dark:text-gray-400 dark:border-gray-800">
+                  <div className="w-2 h-2 bg-gray-500 rounded-full mr-2"></div>
+                  No Plan
+                </Badge>
+              )}
             </div>
           </div>
         </header>
