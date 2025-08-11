@@ -81,9 +81,7 @@ export default function AdminDoctorsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPlan, setFilterPlan] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [formData, setFormData] = useState<DoctorFormData>({
     name: "",
     email: "",
@@ -174,108 +172,6 @@ export default function AdminDoctorsPage() {
     }
   };
 
-  const handleEditDoctor = async () => {
-    if (!selectedDoctor) {
-      setError("No doctor selected");
-      return;
-    }
-    
-    if (!formData.name || !formData.email || !formData.phone) {
-      setError("All fields are required");
-      return;
-    }
-    
-    try {
-      setIsSubmitting(true);
-      setError("");
-      
-      console.log('Updating doctor:', selectedDoctor.id, formData); // Debug log
-      
-      const response = await fetch(`/api/doctors/${selectedDoctor.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update doctor');
-      }
-      
-      setIsEditDialogOpen(false);
-      setSelectedDoctor(null);
-      setFormData({ name: "", email: "", phone: "", plan: "none" });
-      
-      // Refresh the doctors list
-      fetchDoctors();
-    } catch (err) {
-      console.error('Error updating doctor:', err);
-      setError(err instanceof Error ? err.message : 'Failed to update doctor');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleToggleStatus = async (doctorId: string) => {
-    try {
-      setError("");
-      
-      const response = await fetch(`/api/doctors/${doctorId}/toggle-status`, {
-        method: 'PATCH',
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to toggle doctor status');
-      }
-      
-      // Refresh the doctors list
-      fetchDoctors();
-    } catch (err) {
-      console.error('Error toggling doctor status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to toggle doctor status');
-    }
-  };
-
-  const handleDeleteDoctor = async (doctorId: string) => {
-    try {
-      setError("");
-      
-      console.log('Deleting doctor:', doctorId); // Debug log
-      
-      const response = await fetch(`/api/doctors/${doctorId}`, {
-        method: 'DELETE',
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete doctor');
-      }
-      
-      // Refresh the doctors list
-      fetchDoctors();
-    } catch (err) {
-      console.error('Error deleting doctor:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete doctor');
-    }
-  };
-
-  const openEditDialog = (doctor: Doctor) => {
-    setSelectedDoctor(doctor);
-    setFormData({
-      name: doctor.name,
-      email: doctor.email,
-      phone: doctor.phone,
-      plan: doctor.plan
-    });
-    setError(""); // Clear any previous errors
-    setIsEditDialogOpen(true);
-  };
 
   const getPlanBadgeVariant = (plan: string) => {
     switch (plan) {
@@ -498,151 +394,88 @@ export default function AdminDoctorsPage() {
 
         {/* Doctors Grid */}
         {!loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredDoctors.map((doctor) => (
-              <Card key={doctor.id} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md">
+              <Card 
+                key={doctor.id} 
+                className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg hover:shadow-2xl hover:-translate-y-1 cursor-pointer bg-gradient-to-br from-background to-muted/20"
+                onClick={() => window.location.href = `/admin/doctors/${doctor.id}`}
+              >
                 <CardContent className="p-6">
-                  {/* Header with Avatar & Status */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center">
-                        <Users className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
-                          {doctor.name}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant={doctor.active ? "default" : "secondary"} className="text-xs">
-                            {doctor.active ? (
-                              <>
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Active
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Inactive
-                              </>
-                            )}
-                          </Badge>
-                        </div>
-                      </div>
+                  {/* Header Section */}
+                  <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:from-primary/30 group-hover:to-primary/20 transition-all">
+                      <Users className="w-8 h-8 text-primary" />
                     </div>
-                    
-                    {/* Plan Badge */}
-                    <Badge variant={getPlanBadgeVariant(doctor.plan)} className="shrink-0">
-                      {getPlanIcon(doctor.plan)}
-                      <span className="ml-1">{getPlanDisplayName(doctor.plan)}</span>
-                    </Badge>
+                    <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors mb-2">
+                      {doctor.name}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2">
+                      <Badge variant={doctor.active ? "default" : "secondary"} className="text-xs">
+                        {doctor.active ? (
+                          <>
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </Badge>
+                      <Badge variant={getPlanBadgeVariant(doctor.plan)} className="text-xs">
+                        {getPlanIcon(doctor.plan)}
+                        <span className="ml-1">{getPlanDisplayName(doctor.plan)}</span>
+                      </Badge>
+                    </div>
                   </div>
 
-                  {/* Contact Info */}
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{doctor.email}</span>
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                      <div className="text-xl font-bold text-blue-600">{doctor.appointmentsCount || 0}</div>
+                      <div className="text-xs text-blue-600/70">Appointments</div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="h-4 w-4 shrink-0" />
-                      <span>{doctor.phone}</span>
+                    <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                      <div className="text-xl font-bold text-green-600">{doctor.patientsCount || 0}</div>
+                      <div className="text-xs text-green-600/70">Patients</div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 shrink-0" />
+                  </div>
+
+                  {/* Contact Info - Minimal */}
+                  <div className="space-y-2 text-center mb-4">
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Mail className="h-4 w-4" />
+                      <span className="truncate max-w-[180px]">{doctor.email}</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
                       <span>Joined {new Date(doctor.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
 
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-muted/50 rounded-lg">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">{doctor.appointmentsCount || 0}</div>
-                      <div className="text-xs text-muted-foreground">Appointments</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">{doctor.patientsCount || 0}</div>
-                      <div className="text-xs text-muted-foreground">Patients</div>
-                    </div>
-                  </div>
-
-                  {/* Message Usage */}
-                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  {/* Message Usage Bar */}
+                  <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Monthly Conversations</span>
-                      <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">
-                        {getMessageLimit(doctor.plan)} limit
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-blue-200 dark:bg-blue-900/50 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                          style={{ width: `${Math.min((doctor.messagesUsed || 0) / getMessageLimit(doctor.plan) * 100, 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      <span className="text-xs font-medium text-muted-foreground">Messages Used</span>
+                      <span className="text-xs text-muted-foreground">
                         {doctor.messagesUsed || 0}/{getMessageLimit(doctor.plan)}
                       </span>
                     </div>
+                    <div className="w-full bg-muted rounded-full h-1.5">
+                      <div 
+                        className="bg-primary h-1.5 rounded-full transition-all duration-300" 
+                        style={{ width: `${Math.min((doctor.messagesUsed || 0) / getMessageLimit(doctor.plan) * 100, 100)}%` }}
+                      />
+                    </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleStatus(doctor.id)}
-                      className="flex-1"
-                    >
-                      {doctor.active ? (
-                        <>
-                          <EyeOff className="h-4 w-4 mr-1" />
-                          Deactivate
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="h-4 w-4 mr-1" />
-                          Activate
-                        </>
-                      )}
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditDialog(doctor)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Doctor Account</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete {doctor.name}&apos;s account? This action cannot be undone and will remove all associated data.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={() => handleDeleteDoctor(doctor.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete Account
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                  {/* Click to view indicator */}
+                  <div className="text-center pt-2 border-t">
+                    <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                      Click to view details
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -650,117 +483,6 @@ export default function AdminDoctorsPage() {
           </div>
         )}
 
-        {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-          setIsEditDialogOpen(open);
-          if (!open) {
-            setError(""); // Clear errors when dialog closes
-            setSelectedDoctor(null);
-            setFormData({ name: "", email: "", phone: "", plan: "none" });
-          }
-        }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Doctor Account</DialogTitle>
-              <DialogDescription>
-                Update doctor information and settings
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Full Name</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-email">Email Address</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-phone">Phone Number</Label>
-                <Input
-                  id="edit-phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-plan">Subscription Plan</Label>
-                <Select value={formData.plan} onValueChange={(value: 'none' | 'essential' | 'pro' | 'custom') => setFormData({...formData, plan: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">No Plan</div>
-                          <div className="text-xs text-muted-foreground">Account inactive</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="essential">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">Essential</div>
-                          <div className="text-xs text-muted-foreground">1,000 messages/month • ₨10,000</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="pro">
-                      <div className="flex items-center gap-2">
-                        <Crown className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">Pro</div>
-                          <div className="text-xs text-muted-foreground">2,500 messages/month • ₨15,000 • Full customization</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="custom">
-                      <div className="flex items-center gap-2">
-                        <Settings className="h-4 w-4" />
-                        <div>
-                          <div className="font-medium">Enterprise</div>
-                          <div className="text-xs text-muted-foreground">Custom conversations • Custom pricing • Dedicated support</div>
-                        </div>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsEditDialogOpen(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditDoctor}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Updating..." : "Update Doctor"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {!loading && filteredDoctors.length === 0 && (
           <Card>

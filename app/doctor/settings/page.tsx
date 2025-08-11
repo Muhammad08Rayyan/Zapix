@@ -335,33 +335,59 @@ export default function DoctorSettingsPage() {
               <span>Contact Information</span>
             </CardTitle>
             <CardDescription>
-              Set your personal and business contact numbers
+              Set your personal and business contact numbers with strict validation
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="personalPhone">Personal Phone Number</Label>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="personalPhone" className="text-sm font-medium">
+                Personal Phone Number <span className="text-red-500">*</span>
+              </Label>
               <PhoneInputComponent
                 id="personalPhone"
                 value={settings.personalPhone}
                 onChange={(value) => setSettings(prev => ({ ...prev, personalPhone: value || "" }))}
                 placeholder="Enter your personal phone number"
+                required={true}
+                showValidation={true}
               />
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-800 dark:text-blue-200 font-medium mb-1">Examples of valid formats:</p>
+                <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                  <li>• Pakistan: +92 300 1234567</li>
+                  <li>• Pakistan: +92 21 12345678 (landline)</li>
+                  <li>• USA: +1 555 123 4567</li>
+                  <li>• UK: +44 20 1234 5678</li>
+                </ul>
+              </div>
               <p className="text-xs text-muted-foreground">
                 This number will be used for important notifications and emergency alerts
               </p>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="businessPhone">Business Phone Number</Label>
+            <div className="space-y-3">
+              <Label htmlFor="businessPhone" className="text-sm font-medium">
+                Business Phone Number <span className="text-red-500">*</span>
+              </Label>
               <PhoneInputComponent
                 id="businessPhone"
                 value={settings.businessPhone}
                 onChange={(value) => setSettings(prev => ({ ...prev, businessPhone: value || "" }))}
                 placeholder="Enter your business phone number"
+                required={true}
+                showValidation={true}
               />
+              <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-xs text-green-800 dark:text-green-200 font-medium mb-1">Business number guidelines:</p>
+                <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
+                  <li>• Use clinic/hospital main number</li>
+                  <li>• Ensure number is always available during business hours</li>
+                  <li>• Patients will see this number for booking inquiries</li>
+                  <li>• Example: +92 21 12345678</li>
+                </ul>
+              </div>
               <p className="text-xs text-muted-foreground">
-                This number will be displayed to patients for business inquiries
+                This number will be displayed to patients for business inquiries and booking confirmations
               </p>
             </div>
           </CardContent>

@@ -25,18 +25,24 @@ export async function GET(
       id: doctor._id.toString(),
       name: doctor.name,
       email: doctor.email,
-      phone: doctor.phone,
+      personalPhone: doctor.personalPhone,
+      businessPhone: doctor.businessPhone,
       plan: doctor.plan,
       planAssignedDate: doctor.planAssignedDate,
       planExpiryDate: doctor.planExpiryDate,
+      // Map DB field names to frontend expected names
+      subscriptionStartDate: doctor.planAssignedDate,
+      subscriptionEndDate: doctor.planExpiryDate,
       active: doctor.active,
       limits: doctor.limits,
       messageStats: doctor.messageStats,
+      messagesUsed: doctor.messageStats?.messagesUsed || 0,
+      monthlyMessageLimit: doctor.messageStats?.monthlyLimit || 0,
       paymentDetails: doctor.paymentDetails,
-      personalPhone: doctor.personalPhone,
-      businessPhone: doctor.businessPhone,
       notificationSettings: doctor.notificationSettings,
       defaultPrice: doctor.defaultPrice,
+      appointmentsCount: 0,
+      patientsCount: 0,
       createdAt: doctor.createdAt,
       updatedAt: doctor.updatedAt
     };
@@ -59,28 +65,41 @@ export async function PUT(
     await connectToDatabase();
     const resolvedParams = await params;
     
-    const { name, email, phone, plan } = await request.json();
+    const { name, personalPhone, businessPhone, plan, subscriptionStartDate, subscriptionEndDate } = await request.json();
     
-    if (!name || !email || !phone || !plan) {
+    if (!name || !plan) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "Name and plan are required" },
         { status: 400 }
       );
     }
     
-    // Check if another doctor with same email or phone exists
-    const existingDoctor = await DoctorModel.findOne({
-      $and: [
-        { _id: { $ne: resolvedParams.id } },
-        { $or: [{ email }, { phone }] }
-      ]
-    });
+    // Check if another doctor with same phone numbers exists (if provided)
+    const phoneCheckQueries = [];
+    if (personalPhone) {
+      phoneCheckQueries.push({ personalPhone });
+      phoneCheckQueries.push({ phone: personalPhone });
+    }
+    if (businessPhone) {
+      phoneCheckQueries.push({ businessPhone });
+      phoneCheckQueries.push({ phone: businessPhone });
+    }
     
-    if (existingDoctor) {
-      return NextResponse.json(
-        { error: "Doctor with this email or phone already exists" },
-        { status: 409 }
-      );
+    if (phoneCheckQueries.length > 0) {
+      const existingDoctorQuery = {
+        $and: [
+          { _id: { $ne: resolvedParams.id } },
+          { $or: phoneCheckQueries }
+        ]
+      };
+      const existingDoctor = await DoctorModel.findOne(existingDoctorQuery);
+      
+      if (existingDoctor) {
+        return NextResponse.json(
+          { error: "Doctor with this phone number already exists" },
+          { status: 409 }
+        );
+      }
     }
     
     // Get current doctor to check if plan changed
@@ -92,7 +111,18 @@ export async function PUT(
       );
     }
     
-    const updateData: Record<string, unknown> = { name, email, phone, plan };
+    const updateData: Record<string, unknown> = { name, plan };
+    // Handle phone numbers - set to empty string if not provided, otherwise use the provided value
+    updateData.personalPhone = personalPhone || "";
+    updateData.businessPhone = businessPhone || "";
+    
+    // Add subscription dates if provided (map to correct DB field names)
+    if (subscriptionStartDate) {
+      updateData.planAssignedDate = new Date(subscriptionStartDate);
+    }
+    if (subscriptionEndDate) {
+      updateData.planExpiryDate = new Date(subscriptionEndDate);
+    }
     
     // If plan changed, update limits, message stats, activation status, and expiry
     if (currentDoctor.plan !== plan) {
@@ -140,20 +170,25 @@ export async function PUT(
       );
     }
     
-    // Map _id to id for frontend compatibility
+    // Map _id to id for frontend compatibility and map DB field names to frontend names
     const doctorResponse = {
       id: doctor._id.toString(),
       name: doctor.name,
       email: doctor.email,
-      phone: doctor.phone,
+      personalPhone: doctor.personalPhone,
+      businessPhone: doctor.businessPhone,
       plan: doctor.plan,
       active: doctor.active,
       createdAt: doctor.createdAt,
+      subscriptionStartDate: doctor.planAssignedDate,
+      subscriptionEndDate: doctor.planExpiryDate,
       appointmentsCount: 0,
-      patientsCount: 0
+      patientsCount: 0,
+      messagesUsed: doctor.messageStats?.messagesUsed || 0,
+      monthlyMessageLimit: doctor.messageStats?.monthlyLimit || 0
     };
     
-    return NextResponse.json({ doctor: doctorResponse }, { status: 200 });
+    return NextResponse.json({ data: doctorResponse }, { status: 200 });
   } catch (error) {
     console.error("Error updating doctor:", error);
     return NextResponse.json(

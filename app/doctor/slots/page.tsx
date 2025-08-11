@@ -186,7 +186,7 @@ export default function DoctorSlotsPage() {
         <div className="text-center space-y-4">
           <h1 className="text-3xl font-bold">Weekly Availability Schedule</h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Set up your recurring weekly time slots. These will repeat automatically every week.
+            Manage your recurring weekly time slots for patient appointments.
           </p>
           
           <Dialog open={showAddSlotDialog} onOpenChange={(open) => {
@@ -239,8 +239,7 @@ export default function DoctorSlotsPage() {
         ) : (
           <div className="space-y-6">
             {/* Weekly Schedule Grid */}
-            <div className="w-full overflow-x-auto">
-              <div className="flex flex-col sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:flex xl:flex-row gap-4 min-w-full xl:min-w-max">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
               {dayNames.map((dayName, dayIndex) => {
                 // Convert Monday-first index to standard dayOfWeek (Monday=1, Sunday=0)
                 const dayOfWeek = dayIndex === 6 ? 0 : dayIndex + 1;
@@ -248,60 +247,57 @@ export default function DoctorSlotsPage() {
                 const isToday = dayOfWeek === getDay(new Date());
                 
                 return (
-                  <Card key={dayName} className={`flex-none xl:flex-1 xl:min-w-[180px] w-full shadow-sm hover:shadow-md transition-all duration-200 ${isToday ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
+                  <Card key={dayName} className={`shadow-sm hover:shadow-md transition-all duration-200 ${isToday ? 'ring-2 ring-primary ring-offset-2' : ''}`}>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-center text-base font-semibold">
+                      <CardTitle className="text-center text-sm font-semibold">
                         <div className="space-y-1">
-                          {dayName}
+                          <span className="text-lg">{dayName.substring(0, 3)}</span>
+                          <div className="text-xs text-muted-foreground font-normal">{dayName}</div>
                           {isToday && (
-                            <Badge className="text-xs mt-1" variant="default">Today</Badge>
+                            <Badge className="text-xs" variant="default">Today</Badge>
                           )}
                         </div>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-3 px-4 pb-4 min-h-[200px]">
+                    <CardContent className="space-y-2 px-3 pb-3 min-h-[180px]">
                       {daySlots.length === 0 ? (
-                        <div className="text-center py-6 space-y-3">
-                          <Clock className="h-10 w-10 mx-auto text-muted-foreground/30" />
-                          <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground">No slots</p>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setShowAddSlotDialog(true)}
-                              className="gap-1 text-xs h-8"
-                            >
-                              <Plus className="h-3 w-3" />
-                              Add
-                            </Button>
-                          </div>
+                        <div className="text-center py-4 space-y-2">
+                          <Clock className="h-8 w-8 mx-auto text-muted-foreground/30" />
+                          <p className="text-xs text-muted-foreground">No slots</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAddSlotDialog(true)}
+                            className="gap-1 text-xs h-7"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Add
+                          </Button>
                         </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           {daySlots.map((slot) => (
-                            <Card
+                            <div
                               key={slot.id}
-                              className="p-3 space-y-2 cursor-pointer hover:bg-muted/30 transition-all duration-200"
+                              className="p-2 border rounded cursor-pointer hover:bg-muted/30 transition-all duration-200 group"
                               onClick={() => setSelectedSlot(slot)}
                             >
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <div className="font-mono font-bold text-sm">{slot.startTime}</div>
-                                  <Badge className={getSlotTypeColor(slot.type)} variant="secondary">
-                                    {getSlotTypeIcon(slot.type)}
-                                  </Badge>
-                                </div>
-                                
-                                <div className="text-xs text-muted-foreground">
-                                  {slot.duration} min • Rs. {Number(slot.price).toLocaleString('en-PK')}
-                                </div>
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="font-mono text-sm font-bold">{slot.startTime}</div>
+                                <Badge className={`${getSlotTypeColor(slot.type)} text-xs px-1 py-0`} variant="secondary">
+                                  {getSlotTypeIcon(slot.type)}
+                                </Badge>
                               </div>
                               
-                              <div className="flex items-center justify-between pt-1">
+                              <div className="text-xs text-muted-foreground mb-1">
+                                {slot.duration}min • ₨{Number(slot.price).toLocaleString()}
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
                                 <span className="text-xs text-muted-foreground truncate">
-                                  {slot.type === 'both' ? 'Both Online & Offline' : slot.type.replace('_', ' ')}
+                                  {slot.type === 'both' ? 'Online/Offline' : slot.type.replace('_', ' ')}
                                 </span>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -309,7 +305,7 @@ export default function DoctorSlotsPage() {
                                       e.stopPropagation();
                                       setEditingSlot(slot);
                                     }}
-                                    className="h-6 w-6 p-0"
+                                    className="h-5 w-5 p-0"
                                   >
                                     <Edit className="h-3 w-3" />
                                   </Button>
@@ -321,7 +317,7 @@ export default function DoctorSlotsPage() {
                                       handleDeleteSlot(slot.id);
                                     }}
                                     disabled={actionLoading === `delete-${slot.id}`}
-                                    className="h-6 w-6 p-0"
+                                    className="h-5 w-5 p-0"
                                   >
                                     {actionLoading === `delete-${slot.id}` ? (
                                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -331,7 +327,7 @@ export default function DoctorSlotsPage() {
                                   </Button>
                                 </div>
                               </div>
-                            </Card>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -339,7 +335,6 @@ export default function DoctorSlotsPage() {
                   </Card>
                 );
               })}
-              </div>
             </div>
 
             {/* Empty State */}

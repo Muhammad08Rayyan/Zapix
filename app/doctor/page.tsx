@@ -194,63 +194,6 @@ export default function DoctorDashboard() {
           </Card>
         )}
 
-        {/* Setup Progress */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Setup Progress</CardTitle>
-            <CardDescription>
-              {isNoPlan ? "Complete plan assignment to unlock setup steps" : "Complete these steps to optimize your practice"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                {doctor ? (
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-amber-500" />
-                )}
-                <span className="text-sm">Account created</span>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                {isNoPlan ? (
-                  <AlertTriangle className="w-5 h-5 text-amber-500" />
-                ) : (
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                )}
-                <span className="text-sm">
-                  {isNoPlan ? "Waiting for plan assignment" : `${planConfig?.displayName} plan assigned`}
-                </span>
-                {isNoPlan && (
-                  <Badge variant="outline" className="ml-auto text-xs">
-                    Contact Admin
-                  </Badge>
-                )}
-              </div>
-
-              {!isNoPlan && (
-                <>
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-500" />
-                    <span className="text-sm">Configure payment methods</span>
-                    <Button asChild size="sm" variant="outline" className="ml-auto">
-                      <Link href="/doctor/payment-settings">Setup</Link>
-                    </Button>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-500" />
-                    <span className="text-sm">Create appointment slots</span>
-                    <Button asChild size="sm" variant="outline" className="ml-auto">
-                      <Link href="/doctor/slots">Create</Link>
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </DoctorLayout>
   );

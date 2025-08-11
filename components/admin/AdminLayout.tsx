@@ -42,18 +42,6 @@ const sidebarItems = [
     description: "Manage Healthcare Providers"
   },
   {
-    title: "Appointments",
-    href: "/admin/appointments",
-    icon: Calendar,
-    description: "System-wide Bookings"
-  },
-  {
-    title: "Messages",
-    href: "/admin/messages",
-    icon: MessageSquare,
-    description: "WhatsApp Communications"
-  },
-  {
     title: "Activity",
     href: "/admin/activity",
     icon: Activity,
